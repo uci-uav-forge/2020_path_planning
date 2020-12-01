@@ -384,10 +384,11 @@ all_lines = []
 for line in coordinates_to_lines(boundary_coordinates) + coordinates_to_lines(test_obstacle_coordinates) + coordinates_to_lines(test_obstacle_coordinates_2):
     all_lines.append(line)
 
-
+# theta can be any number != 0, 90
+theta = -25
 canvas_width = 1280
 canvas_height = 720
-theta = -25
+
 
 canvas = init_gui(canvas_width, canvas_height)
 draw_boundary(canvas, boundary_coordinates)
