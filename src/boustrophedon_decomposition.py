@@ -160,7 +160,7 @@ def draw_boundary(canv, coordinates):
     """
     boundary = coordinates_to_lines(coordinates)
     for line in boundary:
-        #canv.create_text(line.x1, line.y1, text="[" + str(line.x1) + ',' + str(line.y1) + "]")
+        canv.create_text(line.x1, line.y1, text="[" + str(line.x1) + ',' + str(line.y1) + "]")
         canv.create_line(line.x1, line.y1, line.x2, line.y2)
 
 
@@ -212,7 +212,6 @@ def boustrophedon_line_sweep(canv, angle, lines, orig_points, concave=False):
         indices = extract_concave_vertices(orig_points)
     else:
         indices = extract_convex_vertices(orig_points)
-        print(str(indices))
     if slope == 0:
         for num in indices:
             y1 = points[num][1]
@@ -222,15 +221,19 @@ def boustrophedon_line_sweep(canv, angle, lines, orig_points, concave=False):
             if check_line_inside_boundary(points[num - 1], points[num], points[num + 1], x1, y1):
                 canv.create_line(x1, y1, x2, y2)
     else:
+
+        # for every index of a vertex that was concave (boundary) or convex (obstacle)
+        # check whether to draw a line originating from that point
         for num in indices:
             y1 = 0
             y2 = canvas_height
             x1 = (0 - points[num][1] + slope * points[num][0]) / slope
             x2 = (y2 - points[num][1] + slope * points[num][0]) / slope
-            print("Coordinate: " + str(points[num]) + "P1: " + str(points[num-1]) + "P2: " + str(points[num+1]))
-            if check_line_inside_boundary(points[num - 1], points[num], points[num + 1], x1, y1):
-                if(num==0) and not check_line_inside_boundary(points[len(points)-2],points[0], points[1], x1, y1):
-                    continue
+
+            # if index of that vertex is 0, manually assign points to check against
+            # if index of that vertex is not 0, use the vertex before and after it in the list of coordinates
+            # to see whether the line created will lie inside the bounds of the region
+            if (num != 0 and check_line_inside_boundary(points[num - 1], points[num], points[num + 1], x1, y1)) or (num == 0 and check_line_inside_boundary(points[len(points)-2],points[0], points[1], x1, y1)):
                 long_line = Line(x1, y1, x2, y2)
                 x_intercepts = []
                 for l in lines:
@@ -243,7 +246,19 @@ def boustrophedon_line_sweep(canv, angle, lines, orig_points, concave=False):
                         else:
                             x_intersection = round((l.intercept() - long_line.intercept()) / (long_line.slope() - l.slope()), 5)
                         if x_intersection != points[num][0]:
-                            x_intercepts.append(x_intersection)
+
+                            # if the decomposition line being drawn is collinear with a boundary line, do not include
+                            # any x-coordinates that are contained within that boundary line in the list of
+                            # x-coordinates of intersections
+                            # if index is 0, manually check intersection
+                            if num == 0:
+                                if (x_intersection != points[len(points)-2][0] and x_intersection != points[1][0]):
+                                    x_intercepts.append(x_intersection)
+                            elif x_intersection != points[num-1][0] and x_intersection != points[num+1][0]:
+                                x_intercepts.append(x_intersection)
+
+                # set the proper x-bounds for the decomposition line so that it originates from the specified vertex
+                # and stops when it hits another line
                 x_lower = min(x1, x2)
                 x_upper = max(x1, x2)
                 for x_int in x_intercepts:
@@ -258,7 +273,6 @@ def boustrophedon_line_sweep(canv, angle, lines, orig_points, concave=False):
                 canv.create_line(x_lower, y1, x_upper, y2)
 
 
-# cross product with p1 = [x1,y1]
 def cross_product(p1, p2, p3):
     '''
     Takes the cross product between vectors <v21> and <v23>
@@ -333,7 +347,7 @@ def extract_convex_vertices(orig_coordinates):
 
 def check_line_inside_boundary(p1, p2, p3, x1, y1):
     '''
-    Uses cross product to check if a line is locally contained within the boundary or outside of an obstacle
+    Uses cross product to check if a line is locally contained within the boundary or rests on the outside of an obstacle
     Checks if line passes between <v21> and <v23> or if it passes 'tangent' to p2
 
     Parameters:
@@ -367,13 +381,13 @@ boundary_coordinates = [[150, 280], [200, 200], [450, 260], [470, 220], [400, 10
 test_obstacle_coordinates = [[600, 200], [675, 275], [600, 350], [525, 275]]
 test_obstacle_coordinates_2 = [[650, 120], [700, 120], [700, 170], [650, 170]]
 all_lines = []
-for line in coordinates_to_lines(boundary_coordinates,) + coordinates_to_lines(test_obstacle_coordinates) + coordinates_to_lines(test_obstacle_coordinates_2):
+for line in coordinates_to_lines(boundary_coordinates) + coordinates_to_lines(test_obstacle_coordinates) + coordinates_to_lines(test_obstacle_coordinates_2):
     all_lines.append(line)
 
 
 canvas_width = 1280
 canvas_height = 720
-theta = 57
+theta = -25
 
 canvas = init_gui(canvas_width, canvas_height)
 draw_boundary(canvas, boundary_coordinates)
