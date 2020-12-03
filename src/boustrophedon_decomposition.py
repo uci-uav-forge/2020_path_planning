@@ -126,7 +126,7 @@ def init_gui(w, h):
         canvas window with specified width and height
     '''
     master = Tk()
-    canv = Canvas(master, width=w, height=h)
+    canv = Canvas(master, width=w, height=h, bg='#fff')
     canv.pack()
     return canv
 
