@@ -81,6 +81,8 @@ class NonConvexPolygon(object):
             self.boundarylines.append(self._draw_boundarylines(self.dt.points[l]))
 
         self.neighbor_nodes = self._neighbor_nodes(self.dt)
+
+        self.interiorpts = []
     
     def chart(self, ax, legend=False):
         '''
@@ -105,8 +107,6 @@ class NonConvexPolygon(object):
         ax.set_facecolor('lightblue')
         if legend:
             ax.legend()
-    
-
 
     def _draw_boundarylines(self, boundarypts):
         '''
@@ -140,10 +140,10 @@ class NonConvexPolygon(object):
     def _gen_polygon(self, points, jaggedness, holes=0, plot=False):
         tic = datetime.now()
         # if we're plotting, init figure
+        
         if plot:
             def plot_update(ax, dt):
                 ax.clear()
-                # can't figure out how to just make all tris the same color...
                 centers = np.sum(dt.points[dt.simplices], axis=1, dtype='int')/3.0
                 centr = self._centroid(centers)
                 o = list(self._2boundary_pts(dt))
@@ -167,7 +167,7 @@ class NonConvexPolygon(object):
         edges = len(self._edge_tris_n(dt, 1)) + 2 * len(self._edge_tris_n(dt, 2))
         # desired no of edges comes from jaggedness multiplier
         edges_desired = int(edges * (jaggedness + 1))
-        print('generating polygon with {} desired edges (from {})'.format(edges_desired, edges))
+        print('generating polygon with {} desired edges (from {}) and {} holes'.format(edges_desired, edges, holes))
 
         if plot:
             plot_update(ax, dt)
@@ -176,7 +176,9 @@ class NonConvexPolygon(object):
         # outer, inner simplices
         for h in range(holes):
             edge, non_edge = self._edge_tris(dt)
-            dt = self._del_simplex(dt, np.random.choice(list(non_edge), replace=False))
+            deleted_simplex = np.random.choice(list(non_edge), replace=False)
+            self.interiorpts.append(self._centroid(dt.points[dt.simplices[deleted_simplex]]))
+            dt = self._del_simplex(dt, deleted_simplex)
             if plot:
                 plot_update(ax, dt)
 

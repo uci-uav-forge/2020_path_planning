@@ -5,17 +5,71 @@ from matplotlib.collections import LineCollection
 from scipy import linalg
 import gen_polygon
 
+def bcd(boundarypts, boundarylines, minx, maxx):
+    ''' 
+    decompose
+    '''
+    for blines, bpoints in zip(boundarylines, boundarypts):
+        
+        print('Cutting Boundary:')
+        # for each vertex in each boundary, make points u, v, w
+        # form the triplet with the vertex in the middle
+        # e.g:
+        # U___---V  <---- vertex
+        #        |
+        #        |
+        #        W
+
+        intpts = {}
+        for i, v in enumerate(bpoints):
+            if i == 0:
+                u = bpoints[-1,  :]
+                w = bpoints[i + 1,  :]
+            elif i == len(bpoints) - 1:
+                u = bpoints[i - 1,  :]
+                w = bpoints[0,  :]
+            else:
+                u = bpoints[i - 1,  :]
+                w = bpoints[i + 1,  :]
+            # we cut with line segments from x = min, x = max at y = y_v
+            L = np.array([ [minx, v[1]], [maxx, v[1]] ])
+
+            ipts = []
+            # check a triplet with every line to determine criticality
+            intersects = 0
+            for bline in blines:
+                if intersect(L, bline):
+                    intersects += 1
+            if crit_check(u, v, w, L) and intersects % 2 == 0:
+                # iterate through boundary lines to find intersect pts
+                for j in range(len(boundarylines)):
+                    # need to find intersections across all lines in all boundaries.
+                    for k, line in enumerate(boundarylines[j]):
+                        xy_intersect = intersectpt(line, L)
+                        if xy_intersect is not None:
+                            # intersection points
+                            ipts.append(list(xy_intersect[:,0]))
+            if len(ipts) != 0:
+                intpts[i] = ipts
+        for k, v in intpts.items():
+            print('vertex {}: {}'.format(k, v))
+
+            
+
+
+
+
+
+
+
+
+
 def boustrophedon_decomp(poly, alpha, plot=False):
     '''
-    returns list of (L, intersectpts)
+    decompose
     '''
     toc = datetime.now()
-
-    print(poly.boundarypts)
-
-    lines = []
-    points = []
-    points_neighbors = []
+    sects = []
     for b, boundary in enumerate(poly.boundarypts):
         # check if we're inside a hole
         for i, v in enumerate(poly.boundarypts[b]):
@@ -47,20 +101,21 @@ def boustrophedon_decomp(poly, alpha, plot=False):
             if crit_check(u, v, w, L) and (intersects - 1) % 2 == 0:
                 # find intersect points
                 for closedshape in range(len(poly.boundarylines)):
-                    for bl in poly.boundarylines[closedshape]:
-                        x, y = intersectpt(bl, L)
-                        if x and y:
-                            print('intersect at <{}, {}>'.format(x[0], y[0]))
-                            intersectpts.append([x[0],y[0]])
-                            intersectptsneighbors.append(([bl[0,:], bl[1,:]]))
+                    for p, linespts in enumerate(zip(poly.boundarylines[closedshape], poly.boundarypts[closedshape])):
+                        x, y = intersectpt(linespts[0], L)
+                        if x is not None:
+                            intersectpts.append([x[0], y[0]])
+                            intersectptsneighbors.append([bl[0,:], bl[1,:]])
+                        
+                    
+                    sects.append( (np.asarray(L), np.asarray(intersectpts), np.asarray(intersectptsneighbors)) )
 
-                    lines.append(L)
-                    points.append(intersectpts)
-                    points_neighbors.append(intersectptsneighbors)
-
+    for sect in sects:
+        print(type(sect)) 
+    
     tic = datetime.now()
     print('BDC completed in {}'.format(tic - toc))
-    return lines, points
+    return sect[0], sect[1]
 
 def connectivity(regions):
     '''
@@ -92,58 +147,35 @@ def connectivity(regions):
 
 def intersect(M, N):
     '''
-    check if two line segments, M and N, intersect, by checking
-    orientation of their points
-    (faster)
+    check _if_ two lines, M & N intersect (faster)
     '''
     ccw = lambda a, b, c : (c[1] - a[1])*(b[0] - a[0]) > (b[1] - a[1]) * (c[0] - a[0])
     # points on lines
-    P = M[0,:]
-    Q = M[1,:]
-    R = N[0,:]
-    S = N[1,:]
+    P, Q, R, S = M[0,:], M[1,:], N[0,:], N[1,:]
     # compute intersections
     return ccw(P, R, S) != ccw(Q, R, S) and ccw(P, Q, R) != ccw(P, Q, S)
 
 def intersectpt(P, Q):
     '''
-    Check intersectpt
-
-    NOTE: the div/0 check is on Q...
+    Find the intersection point between two line segments, P and Q.
+    Returns a length 2 array of x, y vals, 
+    or None if they don't intersect.
     '''
     # solve system
     # x = x1 + t * (x2 - x1) = x3 + u * (x4-x3)
     # we solve for [t, u] first 
     # then solve for [x, y]
-
-    x1, x3 = P[0,0], Q[0,0]
-    y1, y3 = P[0,1], Q[0,1]
-    x2, x4 = P[1,0], Q[1,0]
-    y2, y4 = P[1,1], Q[1,1]
-
-    A = np.array([
-        [x2-x1, x3-x4],
-        [y2-y1, y3-y4]
-    ])
-    b = np.array([
-        [x3-x1],
-        [y3-y1]
-    ])
-
+    x1, x2, x3, x4 = P[0,0], P[1,0], Q[0,0], Q[1,0]
+    y1, y2, y3, y4 = P[0,1], P[1,1], Q[0,1], Q[1,1]
+    A = np.array([ [x2-x1, x3-x4], [y2-y1, y3-y4] ])
+    b = np.array([ [x3-x1], [y3-y1] ])
     t = linalg.solve(A, b)
-    
-    m = np.array([
-        [x2-x1],
-        [y2-y1]
-    ])
-    n = np.array([
-        [x1],
-        [y1]
-    ])
+    m = np.array([ [x2-x1], [y2-y1] ])
+    n = np.array([ [x1], [y1] ])
     if 1 >= t[0] >= 0 and 1 >= t[1] >= 0:
-        return (t[0] * m + n)[0], (t[0] * m + n)[1]
+        return t[0] * m + n
     else:
-        return None, None
+        return None
 
 def crit_check(u, v, w, L, plot=False):
     '''
@@ -264,10 +296,19 @@ if __name__ == '__main__':
 
     ax = plt.axes()
     pts = gen_polygon.gen_cluster_points(no_clusters=3, cluster_n=20, cluster_size=80, cluster_dist=120)
-    poly = gen_polygon.NonConvexPolygon(pts, 4, 2, plot=True)
+    poly = gen_polygon.NonConvexPolygon(pts, 4, 2)
+
+    bls = poly.boundarylines
+    bps = poly.boundarypts
+    minx, maxx = poly.min_bounds[0], poly.max_bounds[0]
+
+    bcd(bps, bls, minx, maxx)
+
+    '''
     poly.chart(ax)
     lines, points = boustrophedon_decomp(poly, 1)
-    
+
+
     p = []
     for pset in points:
         p.extend(pset)
@@ -279,3 +320,4 @@ if __name__ == '__main__':
     segs = LineCollection(lines, colors='grey')
     ax.add_collection(segs)
     plt.show()
+    '''

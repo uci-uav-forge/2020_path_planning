@@ -221,7 +221,6 @@ def boustrophedon_line_sweep(canv, angle, lines, orig_points, concave=False):
             if check_line_inside_boundary(points[num - 1], points[num], points[num + 1], x1, y1):
                 canv.create_line(x1, y1, x2, y2)
     else:
-
         # for every index of a vertex that was concave (boundary) or convex (obstacle)
         # check whether to draw a line originating from that point
         for num in indices:
@@ -246,7 +245,6 @@ def boustrophedon_line_sweep(canv, angle, lines, orig_points, concave=False):
                         else:
                             x_intersection = round((l.intercept() - long_line.intercept()) / (long_line.slope() - l.slope()), 5)
                         if x_intersection != points[num][0]:
-
                             # if the decomposition line being drawn is collinear with a boundary line, do not include
                             # any x-coordinates that are contained within that boundary line in the list of
                             # x-coordinates of intersections
