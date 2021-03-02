@@ -421,18 +421,20 @@ def bcd(poly, ax):
         for k, v in pos.items():
             pos_higher[k] = (v[0]+y_off, v[1])
         
+
         critpts = []
-        critints = []
+
         # Iterate through nodes and check if they are critical
-        print('Graph... outer={}'.format(outer))
         ordered_nodes = list(nx.dfs_preorder_nodes(G, source=start_node))
-        print(ordered_nodes)
         for j, node in enumerate(ordered_nodes):
             i, j, k = iterate_neighbors(j, ordered_nodes)
-            print('{} {} {}'.format(i, j, k))
-            crit = crit_check(poly.points[i], poly.points[j], poly.points[k], outer)
+            crit, crit_type = check_pt(poly.points, outer, i, j, k)
             if crit:
-                critpts.append(j)
+                for H, h_outer
+
+
+
+
         
         nx.draw(G, pos, node_size=10, ax=ax)
         nx.draw_networkx_labels(G, pos_higher, ax=ax)
@@ -440,6 +442,27 @@ def bcd(poly, ax):
             
     toc = datetime.now()
     print('Generated BCD in {}'.format(toc - tic))
+
+
+def check_pt(points, outer, i, j, k):
+    '''
+    check the points i, j, k in the points list 
+    '''
+    is_crit = False
+    crit_type = None
+    if points[i][0] > points[j][0] and points[k][0] > points[j][0]:
+        is_crit = True
+        if outer:
+            crit_type = 'opening'
+        else:
+            crit_type = 'split'
+    elif points[i][0] < points[j][0] and points[k][0] < points[j][0]:
+        is_crit = True
+        if outer:
+            crit_type = 'closing'
+        else:
+            crit_type = 'merge'
+    return is_crit, crit_type
 
 def intersectv(Q, x):
     '''Check if a line segment Q intersects with a vertical line
@@ -601,7 +624,7 @@ def check_inside(p1, p2, p3, L):
         return False
 
 if __name__ == '__main__':
-    poly = ConvPolygon(points=(5, 22, 120, 300), jaggedness=8, holes=2)
+    poly = ConvPolygon(points=(2, 20, 40, 90), jaggedness=8, holes=2)
     fig = plt.figure()
     ax1 = fig.add_subplot(121)
 
