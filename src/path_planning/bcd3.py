@@ -406,6 +406,10 @@ def iterate_neighbors(idx, container):
 def bcd(poly, ax):
     tic = datetime.now()
 
+    critpts = []
+    intersects = []
+    intersectpts = []
+
     for G, outer in poly.graphs:
         start_node = list(G.nodes)[0]
 
@@ -422,23 +426,35 @@ def bcd(poly, ax):
             pos_higher[k] = (v[0]+y_off, v[1])
         
 
-        critpts = []
-
         # Iterate through nodes and check if they are critical
         ordered_nodes = list(nx.dfs_preorder_nodes(G, source=start_node))
-        for j, node in enumerate(ordered_nodes):
+        for j, _ in enumerate(ordered_nodes):
             i, j, k = iterate_neighbors(j, ordered_nodes)
             crit, crit_type = check_pt(poly.points, outer, i, j, k)
             if crit:
-                for H, h_outer
+                ips = []
+                for H, h_outer in poly.graphs:
+                    h_ordered_nodes = list(nx.dfs_preorder_nodes(G, source=start_node))
+                    for m, _ in enumerate(h_ordered_nodes):
+                        l, m, _ = iterate_neighbors(m, h_ordered_nodes)
+                        ip = intersect_line(poly.points[j][0], poly.points[l], poly.points[m])
+                        if ip and ip not in ips:
+                            ips.append(ip)
 
+                intersects.append( (j, ips) )
 
-
-
-        
         nx.draw(G, pos, node_size=10, ax=ax)
-        nx.draw_networkx_labels(G, pos_higher, ax=ax)
-        ax.plot(np.array(poly.points[critpts])[:,0], np.array(poly.points[critpts])[:,1], 'ro')
+        # nx.draw_networkx_labels(G, pos_higher, ax=ax)
+        
+    for c in intersects:
+        print('point: {} --> {}'.format(c[0], poly.points[c[0]]))
+        for k in c[1]:
+            print('\tpoints: {}'.format(k))
+            intersectpts.append(k)
+        critpts.append(c[0])
+
+    ax.plot(poly.points[critpts, 0], poly.points[critpts, 1], 'rx')
+    ax.plot([i[0] for i in intersectpts], [i[1] for i in intersectpts], 'y.')
             
     toc = datetime.now()
     print('Generated BCD in {}'.format(toc - tic))
@@ -497,6 +513,32 @@ def intersect(M, N):
     P, Q, R, S = M[0,:], M[1,:], N[0,:], N[1,:]
     # compute intersections
     return ccw(P, R, S) != ccw(Q, R, S) and ccw(P, Q, R) != ccw(P, Q, S)
+
+
+def intersect_line(x, a, c):
+    '''
+    Check if the vertical line x=x intersects with the line
+    formed by the points a, c and return intersection point
+    '''
+    is_intersect = False
+
+    if a[0] < x and x < c[0]:
+        is_intersect = True
+        p1 = a
+        p2 = c
+    elif a[0] > x and x > c[0]:
+        is_intersect = True
+        p1 = c
+        p2 = a
+
+    if is_intersect:
+        px = x
+        m = abs(x - p1[0]) / abs(p2[0] - p1[0])
+        py = p1[1] + m * (p2[1] - p1[1])
+
+        return [px, py]
+    else:
+        return None
 
 def intersectpt(P, Q):
     '''
