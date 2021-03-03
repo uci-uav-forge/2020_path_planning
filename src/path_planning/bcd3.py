@@ -8,6 +8,9 @@ from collections import OrderedDict, deque
 from scipy import linalg
 import networkx as nx
 
+
+np.random.seed(42)
+
 class ConvPolygon(object):
     def __init__(self, points=(2, 40, 10, 40), jaggedness=2, holes=0):
         self.points = self.gen_cluster_points(*points)
@@ -402,9 +405,88 @@ def iterate_neighbors(idx, container):
         a, b, c = container[idx-1], container[idx], container[idx+1]
     return a, b, c
 
+def find_lower_upper(pts, v, e1, e2):
+    # make them ints so we can use set
+    o1 = (set(e1) - set([v])).pop()
+    o2 = (set(e2) - set([v])).pop()
+
+    # see which is lower/upper
+    if pts[o1][1] < pts[o2][1]:
+        lower,  upper, lower_e,upper_e = o1, o2, e1, e2
+    else:
+        lower,  upper, lower_e,upper_e = o2, o1, e2, e1
+    # return lower then upper
+    return lower, upper, lower_e, upper_e
 
 def bcd(poly, ax):
     tic = datetime.now()
+    vlist, elist = [], []
+    for G, outer in poly.graphs:
+        vlist += [v for v in G.nodes]
+        elist += [e for e in G.edges()]
+
+        ### Plotting stuff
+        # get vertices and sort by x position
+        pos = {}
+        for n in G.nodes:
+            pos[n] = poly.points[n]
+        pos_higher = {}
+        y_off = .2  
+        # offset on the y axis
+        for k, v in pos.items():
+            pos_higher[k] = (v[0]+y_off, v[1])
+        nx.draw(G, pos, node_size=10, ax=ax)
+        nx.draw_networkx_labels(G, pos_higher, ax=ax)
+
+    # sort vlist by x val
+    vlist = sorted(vlist, key=lambda v: poly.points[v][0])
+    # stateful edge list
+    L = set()
+    # edge list, only we don't remove edges
+    cellL = set()
+
+    clist = []
+    # boustrophedon cell points list
+    for v in vlist:        
+        es = [e for e in elist if v in e]
+        l, u, le, ue = find_lower_upper(poly.points, v, es[0], es[1])
+        assert(poly.points[l][1] < poly.points[u][1])
+        # both right
+        if poly.points[l][0] > poly.points[v][0] and poly.points[u][0] > poly.points[v][0]:
+            L |= set([ue, le])
+            cellL |= set([ue, le])
+
+            crit = True
+        # both left
+        elif poly.points[l][0] < poly.points[v][0] and poly.points[u][0] < poly.points[v][0]:
+            L -= set([ue, le])
+            crit = True
+        # middle (lower is left)
+        elif poly.points[l][0] < poly.points[v][0] and poly.points[u][0] > poly.points[v][0]:
+            L -= set([le])
+            L.add(ue)
+            cellL.add(ue)
+            crit = False
+        # middle (upper is left)
+        elif poly.points[u][0] < poly.points[v][0] and poly.points[l][0] > poly.points[v][0]:
+            L -= set([ue])
+            L.add(le)
+            cellL.add(le)
+            crit = False
+        else:
+            raise(Exception('lower/upper edge comparison failed!'))
+        
+        # print("v, {} crit: {}-->{}".format(crit, v, [e for e in L if v not in e]))
+
+        # create new cell
+        if crit:
+            clist.append(v)
+    ax.plot(poly.points[clist,0],poly.points[clist,1], 'rx')
+        
+        
+                    
+           
+    '''
 
     critpts = []
     intersects = []
@@ -456,6 +538,7 @@ def bcd(poly, ax):
     ax.plot(poly.points[critpts, 0], poly.points[critpts, 1], 'rx')
     ax.plot([i[0] for i in intersectpts], [i[1] for i in intersectpts], 'y.')
             
+    '''
     toc = datetime.now()
     print('Generated BCD in {}'.format(toc - tic))
 
@@ -666,12 +749,11 @@ def check_inside(p1, p2, p3, L):
         return False
 
 if __name__ == '__main__':
-    poly = ConvPolygon(points=(2, 20, 40, 90), jaggedness=8, holes=2)
+    poly = ConvPolygon(points=(2, 23, 1, 1), jaggedness=20, holes=4)
     fig = plt.figure()
-    ax1 = fig.add_subplot(121)
-
-    poly.chart(ax1)
-    ax = fig.add_subplot(122)
-    ax.set_aspect('equal')
+    # ax1 = fig.add_subplot(121)
+    # poly.chart(ax1)
+    ax = fig.add_subplot()
+    #ax.set_aspect('equal')
     bcd = bcd(poly, ax)
     plt.show()
