@@ -9,14 +9,14 @@ from scipy import linalg
 import networkx as nx
 
 
-np.random.seed(42)
+# np.random.seed(42)
 
 class ConvPolygon(object):
     def __init__(self, points=(2, 40, 10, 40), jaggedness=2, holes=0):
         self.points = self.gen_cluster_points(*points)
         self.gen_poly(jaggedness=jaggedness, holes=holes)
         self.blist = self.make_boundaries()
-        self.graphs = self.shape_graph()
+        self.G = self.shape_graph()
 
         
     def gen_cluster_points(self, no_clusters, cluster_n, cluster_size, cluster_dist):
@@ -56,11 +56,16 @@ class ConvPolygon(object):
             elist, nlist = [], []
             for k, v in boundary.items():
                 nlist.append(k)
-                elist.append( (v[0], k) )
+                if outer:
+                    elist.append( (v[0], k, 1) )
+                else:
+                    elist.append( (v[0], k, 2) )
+
             G.add_nodes_from(nlist)
-            G.add_edges_from(elist)
-            graphs.append((G, outer))
-        return graphs
+            G.add_weighted_edges_from(elist)
+            graphs.append(G)
+        G = nx.compose_all(graphs)
+        return G
 
     def bps_bls(self):
         '''numpy arrays of boundary points, boundary lines
@@ -405,8 +410,13 @@ def iterate_neighbors(idx, container):
         a, b, c = container[idx-1], container[idx], container[idx+1]
     return a, b, c
 
+
+
+
+###################################################################################
+
+
 def find_lower_upper(pts, v, e1, e2):
-    # make them ints so we can use set
     o1 = (set(e1) - set([v])).pop()
     o2 = (set(e2) - set([v])).pop()
 
@@ -418,25 +428,142 @@ def find_lower_upper(pts, v, e1, e2):
     # return lower then upper
     return lower, upper, lower_e, upper_e
 
+
+def intersect_line(x, a, b):
+    '''
+    Check if the vertical line x=x intersects with the line
+    formed by the points a, c and return intersection point
+    '''
+    is_intersect = False
+
+    if a[0] < x and x < b[0]:
+        is_intersect = True
+        p1 = a
+        p2 = b
+    elif a[0] > x and x > b[0]:
+        is_intersect = True
+        p1 = b
+        p2 = a
+
+    if is_intersect:
+        px = x
+        m = abs(x - p1[0]) / abs(p2[0] - p1[0])
+        py = p1[1] + m * (p2[1] - p1[1])
+
+        return [px, py]
+    else:
+        return None
+
+def line_sweep(poly, ax):
+    # List of events (vertices/nodes)
+    
+    L = sorted(poly.G.nodes, key=lambda t: poly.points[t][0])
+    # List of open cells
+    O = []
+    # List of closed cells
+    C = []
+    for i, v in enumerate(L[:-1]):
+        E = [L[i+1]]
+        process_events(E, O, C, poly.points, poly.G)
+
+
+def lower_upper(points, event, G):
+    vA, vB = tuple(G.adj[event])
+    if points[vA][1] > points[vB][1]:
+        lower, upper = vA, vB
+    else:
+        lower, upper = vB, vA
+    return lower, upper
+
+def check_edge(x, edge, points):
+    if points[edge[0]][0] > x and x > points[edge[1]][0]:
+        return True
+    elif points[edge[1]][0] > x and x > points[edge[0]][0]:
+        return True
+    else:
+        return False
+
+def get_intersects(event, G, points):
+    x, y = points[event][0], points[event][1]
+    intersects = []
+    # get all intersects
+    for edge in G.edges():
+        if check_edge(x, edge, points):
+            # get the point of intersection
+            ipt = intersect_line(x, points[edge[0]], points[edge[1]])
+            # store its x, y, edge1 idx, edge2 idx
+            intersects.append(ipt + [edge[0]] + [edge[1]] + [G[edge[0]][edge[1]]['weight']])
+            # intersects.append([ipt[0], ipt[1], edge[0], edge[1]])
+    # create and sort structured array by y-coordinate
+    if intersects:
+        intersects = np.array(sorted(intersects, key=lambda t: t[1]))        
+        n = 0
+        above = intersects[n + 1,:]
+        below = intersects[n,:]
+        
+        print('\tbelow {}, y {}, above {}'.format(below[1], y, above[1]))
+
+        while y > above[1]:
+            if y > intersects[-1,1]:
+                above = None
+                break
+            above = intersects[n+1,:]
+            below = intersects[n,:]
+
+            print('\tbelow='+str(below[1]))
+            print('\tabove='+str(above[1]))
+            print(n)
+            n += 1
+        if above is not None:
+            print('\tbelow {}, y {}, above {}'.format(below[1], y, above[1]))
+        print('-----')
+
+    
+
+
+def process_events(E, O, C, points, G):
+    contains_split_merge = False
+    for event in E:
+        l, u = lower_upper(points, event, G)
+        
+        # SPLIT
+        if points[l][0] > points[event][0] and points[u][0] > points[event][0]:
+            contains_split_merge = True
+            # Create Intersection and add it to E
+            get_intersects(event, poly.G, points)
+        
+        # MERGE
+        elif points[l][0] < points[event][0] and points[u][0] < points[event][0]:
+            contains_split_merge = True
+            # Create intersection and add it to E
+            get_intersects(event, poly.G, points)
+        
+        elif points[l][0] < points[event][0] and points[u][0] > points[event][0]:
+            
+
+
+
 def bcd(poly, ax):
     tic = datetime.now()
     vlist, elist = [], []
-    for G, outer in poly.graphs:
-        vlist += [v for v in G.nodes]
-        elist += [e for e in G.edges()]
+    newpoints = poly.points.tolist()
+    vlist += [v for v in poly.G.nodes]
+    elist += [e for e in poly.G.edges()]
 
-        ### Plotting stuff
-        # get vertices and sort by x position
-        pos = {}
-        for n in G.nodes:
-            pos[n] = poly.points[n]
-        pos_higher = {}
-        y_off = .2  
-        # offset on the y axis
-        for k, v in pos.items():
-            pos_higher[k] = (v[0]+y_off, v[1])
-        nx.draw(G, pos, node_size=10, ax=ax)
-        nx.draw_networkx_labels(G, pos_higher, ax=ax)
+    '''
+    ### Plotting stuff
+    # get vertices and sort by x position
+    pos = {}
+    for n in G.nodes:
+        pos[n] = poly.points[n]
+    pos_higher = {}
+    y_off = .2  
+    # offset on the y axis
+    for k, v in pos.items():
+        pos_higher[k] = (v[0]+y_off, v[1])
+    nx.draw(G, pos, node_size=10, ax=ax)
+    nx.draw_networkx_labels(G, pos_higher, ax=ax)
+    '''
 
     # sort vlist by x val
     vlist = sorted(vlist, key=lambda v: poly.points[v][0])
@@ -447,17 +574,23 @@ def bcd(poly, ax):
 
     clist = []
     # boustrophedon cell points list
-    for v in vlist:        
+
+    new_graph_nlist = []
+    new_graph_elist = []
+
+    for v in vlist:
+        cellL = L     
         es = [e for e in elist if v in e]
         l, u, le, ue = find_lower_upper(poly.points, v, es[0], es[1])
         assert(poly.points[l][1] < poly.points[u][1])
         # both right
+        # IN
         if poly.points[l][0] > poly.points[v][0] and poly.points[u][0] > poly.points[v][0]:
             L |= set([ue, le])
             cellL |= set([ue, le])
-
             crit = True
         # both left
+        # OUT
         elif poly.points[l][0] < poly.points[v][0] and poly.points[u][0] < poly.points[v][0]:
             L -= set([ue, le])
             crit = True
@@ -480,280 +613,81 @@ def bcd(poly, ax):
 
         # create new cell
         if crit:
-            clist.append(v)
-    ax.plot(poly.points[clist,0],poly.points[clist,1], 'rx')
-        
-        
-                    
-           
-    '''
+            line_x = poly.points[v][0]
+            ipts = []
+            print('\tnew cell at {}'.format(line_x))
+            # find all intersection points of x=v_x
+            for edge in cellL:
+                if v not in edge:
+                    ipts.append( (intersect_line(line_x, poly.points[edge[0]], poly.points[edge[1]]), edge))
 
-    critpts = []
-    intersects = []
-    intersectpts = []
+            # iterate through the list and find the y-neighbors of v
+            # b corresponds to v, the current vertex
+            new_v = (poly.points[v], v)
+            ysorted_ipts = sorted(ipts, key=lambda t: t[0][1])
 
-    for G, outer in poly.graphs:
-        start_node = list(G.nodes)[0]
+            a, a_i, c, c_i, a_iw, c_iw = -1, -1, -1, -1, -1, -1
 
-    
-        # PLOT POSITIONS FOR NODES
-        # get vertices and sort by x position
-        pos = {}
-        for n in G.nodes:
-            pos[n] = poly.points[n]
-        pos_higher = {}
-        y_off = 15  
-        # offset on the y axis
-        for k, v in pos.items():
-            pos_higher[k] = (v[0]+y_off, v[1])
-        
-
-        # Iterate through nodes and check if they are critical
-        ordered_nodes = list(nx.dfs_preorder_nodes(G, source=start_node))
-        for j, _ in enumerate(ordered_nodes):
-            i, j, k = iterate_neighbors(j, ordered_nodes)
-            crit, crit_type = check_pt(poly.points, outer, i, j, k)
-            if crit:
-                ips = []
-                for H, h_outer in poly.graphs:
-                    h_ordered_nodes = list(nx.dfs_preorder_nodes(G, source=start_node))
-                    for m, _ in enumerate(h_ordered_nodes):
-                        l, m, _ = iterate_neighbors(m, h_ordered_nodes)
-                        ip = intersect_line(poly.points[j][0], poly.points[l], poly.points[m])
-                        if ip and ip not in ips:
-                            ips.append(ip)
-
-                intersects.append( (j, ips) )
-
-        nx.draw(G, pos, node_size=10, ax=ax)
-        # nx.draw_networkx_labels(G, pos_higher, ax=ax)
-        
-    for c in intersects:
-        print('point: {} --> {}'.format(c[0], poly.points[c[0]]))
-        for k in c[1]:
-            print('\tpoints: {}'.format(k))
-            intersectpts.append(k)
-        critpts.append(c[0])
-
-    ax.plot(poly.points[critpts, 0], poly.points[critpts, 1], 'rx')
-    ax.plot([i[0] for i in intersectpts], [i[1] for i in intersectpts], 'y.')
+            # add these intersection points to the list of points
+            # and store their indices into a_i, c_i
+            for i, pt in enumerate(ysorted_ipts):
+                if pt[0][1] > poly.points[v][1]:
+                    print(pt[1])
+                    # a_i, c_i are new indices in newpoints
+                    a = ysorted_ipts[i-1]
+                    c = ysorted_ipts[i]
+                    newpoints.append(a[0])
+                    a_i = len(newpoints) - 1 
+                    newpoints.append(c[0])
+                    c_i = len(newpoints) - 1
+                    break
             
-    '''
+            if (a, c, a_i, c_i) != (-1, -1, -1, -1):
+                assert(newpoints[a_i] == a[0] and newpoints[c_i] == c[0])
+                
+                # create new graph with e[0] --> a_i, e[1] --> a_i, v --> a_i mappings
+                new_graph_elist.extend([
+                    (a[1][0], a_i, 1), 
+                    (a[1][1], a_i, 1), 
+                    (c[1][0], c_i, 1), 
+                    (c[1][1], c_i, 1), 
+                    (a_i, v, 3), 
+                    (c_i, v, 3)
+                ])
+                new_graph_nlist.extend([a[1][0], a[1][1], c[1][0], c[1][1], a_i, c_i, v])
+
+    P = nx.Graph()
+    P.add_nodes_from(new_graph_nlist)
+    P.add_weighted_edges_from(new_graph_elist)
+
+
+    F = nx.compose(poly.G, P)
+    ### Plotting stuff
+    # get vertices and sort by x position
+    pos = {}
+    for n in F.nodes:
+        pos[n] = newpoints[n]
+    pos_higher = {}
+    y_off = .08  
+    # offset on the y axis
+    for k, v in pos.items():
+        pos_higher[k] = (v[0]+y_off, v[1])
+    edges, weights = zip(*nx.get_edge_attributes(F,'weight').items())
+    nx.draw(F, pos, node_size=10, ax=ax, edgelist=edges, edge_color=weights, edge_cmap=plt.cm.tab10)
+    # nx.draw_networkx_labels(F, pos_higher, ax=pax)
+
+
     toc = datetime.now()
     print('Generated BCD in {}'.format(toc - tic))
 
 
-def check_pt(points, outer, i, j, k):
-    '''
-    check the points i, j, k in the points list 
-    '''
-    is_crit = False
-    crit_type = None
-    if points[i][0] > points[j][0] and points[k][0] > points[j][0]:
-        is_crit = True
-        if outer:
-            crit_type = 'opening'
-        else:
-            crit_type = 'split'
-    elif points[i][0] < points[j][0] and points[k][0] < points[j][0]:
-        is_crit = True
-        if outer:
-            crit_type = 'closing'
-        else:
-            crit_type = 'merge'
-    return is_crit, crit_type
-
-def intersectv(Q, x):
-    '''Check if a line segment Q intersects with a vertical line
-    on the point x.
-
-    Parameters
-    ----------
-    Q : np.ndarray of shape (2 x 2)
-        line: p1, p2
-    x : float64
-        location of vertical line segment
-
-    Returns
-    -------
-    None or float64
-        The intersection y- point or None if no intersection
-    '''
-    x1, x2, y1, y2 = Q[0,0], Q[1,0], Q[0, 1], Q[1,1]
-    m = (y2 - y1) / (x2 - x1)
-    y = y1 + m * (x - x1)
-    if y1 <= y <= y2:
-        return y
-    else:
-        return None
-
-def intersect(M, N):
-    '''
-    check _if_ two lines, M & N intersect (faster)
-    '''
-    ccw = lambda a, b, c : (c[1] - a[1])*(b[0] - a[0]) > (b[1] - a[1]) * (c[0] - a[0])
-    # points on lines
-    P, Q, R, S = M[0,:], M[1,:], N[0,:], N[1,:]
-    # compute intersections
-    return ccw(P, R, S) != ccw(Q, R, S) and ccw(P, Q, R) != ccw(P, Q, S)
-
-
-def intersect_line(x, a, c):
-    '''
-    Check if the vertical line x=x intersects with the line
-    formed by the points a, c and return intersection point
-    '''
-    is_intersect = False
-
-    if a[0] < x and x < c[0]:
-        is_intersect = True
-        p1 = a
-        p2 = c
-    elif a[0] > x and x > c[0]:
-        is_intersect = True
-        p1 = c
-        p2 = a
-
-    if is_intersect:
-        px = x
-        m = abs(x - p1[0]) / abs(p2[0] - p1[0])
-        py = p1[1] + m * (p2[1] - p1[1])
-
-        return [px, py]
-    else:
-        return None
-
-def intersectpt(P, Q):
-    '''
-    Find the intersection point between two line segments, P and Q.
-    Returns a length 2 array of x, y vals, 
-    or None if they don't intersect.
-    '''
-    # solve system
-    # x = x1 + t * (x2 - x1) = x3 + u * (x4-x3)
-    # we solve for [t, u] first 
-    # then solve for [x, y]
-    x1, x2, x3, x4 = P[0,0], P[1,0], Q[0,0], Q[1,0]
-    y1, y2, y3, y4 = P[0,1], P[1,1], Q[0,1], Q[1,1]
-    A = np.array([ [x2-x1, x3-x4], [y2-y1, y3-y4] ])
-    b = np.array([ [x3-x1], [y3-y1] ])
-    t = linalg.solve(A, b)
-    m = np.array([ [x2-x1], [y2-y1] ])
-    n = np.array([ [x1], [y1] ])
-    if 1 >= t[0] >= 0 and 1 >= t[1] >= 0:
-        return t[0] * m + n
-    else:
-        return None
-
-def crit_check(u, v, w, outer):
-    '''
-    Check if the vertex `v` is a critical vertex
-    '''
-    cross = (u[0] - v[0]) * (w[1] - v[1]) -  (u[1] - v[1]) * (w[0] - v[0])
-    if outer:
-        if cross > 0:
-            return True
-        else:
-            return False
-    else:
-        if cross < 0:
-            return True
-        else:
-            return False
-    
-def cross(M, N, sign=False, lines=False):
-    '''
-    2d cross product of two lines M & N
-
-    Parameters
-    ----------
-    L1, L2 : np.ndarray, dtype=float64
-        2 x 2 ndarray: rows are start point end point, cols are x, y
-    sign: bool
-        return -1 or 1 corresponding to the sign of M x N
-        faster because it skips expensive sqrt operation
-        defaults to False
-    lines: 
-        whether we take x product of lines or points. Default M, N
-        are length 2 arrays or tuples of points; if true, M, N are
-        2x2 arrays of lines.
-    '''
-    if lines:
-        u = M[1,:] - M[0,:]
-        v = N[1,:] - N[0,:]
-    else:
-        u = M
-        v = N
-
-    if sign:
-        return int(np.sign(u[0]*v[1] - u[1]*v[0]))
-    else:
-        u = u / np.sqrt(u.dot(u.T))
-        v = v / np.sqrt(v.dot(v.T))
-        return u[0]*v[1] - u[1]*v[0]
-
-def conv_vert(pts):
-    '''
-    Takes a list of coordinates, assumes they connect in the sequence they are 
-    listed to form a polygon, and returns the indices of coordinates that are 
-    convex vertices of that polygon
-
-    Parameters
-    ----------
-    pts : ndarray, dtype=float64
-        2d M x 2 array of `M` points. NOTE: First and last M must be identical
-        and are the opening/closing point.
-    
-    Returns
-    -------
-    tuple of set
-        convex pt indices, concave pt indices
-    '''
-    convex = set()
-    concave = set()
-    for i, p in enumerate(pts[:-1]):
-        if cross(pts[i], pts[i+1], sign=True) == -1:
-            convex.add(i)
-        else:
-            concave.add(i)
-    return convex, concave
-
-def check_inside(p1, p2, p3, L):
-    '''
-    check if a line L is locally contained within the boundary formed by p1, p2, p3.
-    
-    Parameters
-    ----------
-    p1, p2, p3 : np.ndarray, dtype=float64
-        length 2 array of points
-    L : np.ndarray, dtype=float64
-        2x2 array which form a line segment from two points
-    
-    Returns
-    -------
-    bool
-        True if locally contained
-        False if not contained
-    '''
-    M = np.array([
-        p1,
-        p2
-    ])
-    N = np.array([
-        p2,
-        p3
-    ])
-    if cross(M, L, sign=True, lines=True) ^ cross(L, N, sign=True, lines=True):
-        return True
-    else:
-        return False
 
 if __name__ == '__main__':
-    poly = ConvPolygon(points=(2, 23, 1, 1), jaggedness=20, holes=4)
+    poly = ConvPolygon(points=(3, 10, 1, 1), jaggedness=8, holes=3)
     fig = plt.figure()
     # ax1 = fig.add_subplot(121)
     # poly.chart(ax1)
     ax = fig.add_subplot()
     #ax.set_aspect('equal')
-    bcd = bcd(poly, ax)
-    plt.show()
+    bcd = line_sweep(poly, ax)
+    # plt.show()
