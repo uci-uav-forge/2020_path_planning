@@ -7,9 +7,17 @@ from datetime import datetime
 from collections import OrderedDict, deque
 from scipy import linalg
 import networkx as nx
+from collections import defaultdict
+from enum import Enum
 
 
 # np.random.seed(42)
+class Event(Enum):
+    CLOSE=1
+    OPEN=2
+    SPLIT=3
+    MERGE=4
+    INFLECTION=5
 
 class ConvPolygon(object):
     def __init__(self, points=(2, 40, 10, 40), jaggedness=2, holes=0):
@@ -464,16 +472,36 @@ def line_sweep(poly, ax):
     C = []
     for i, v in enumerate(L[:-1]):
         E = [L[i+1]]
-        process_events(E, O, C, poly.points, poly.G)
+        E, O, C, poly.points, poly.G = process_events(E, O, C, poly.points, poly.G)
+    
+    ### Plotting stuff
+    # get vertices and sort by x position
+    pos = {}
+    for n in poly.G.nodes:
+        pos[n] = poly.points[n]
+    pos_higher = {}
+    offmax = np.max(poly.points[:,1])
+    offmin = np.min(poly.points[:,1])
+    y_off = (offmax - offmin) * 0.03
+    # offset on the y axis
+    for k, v in pos.items():
+        pos_higher[k] = (v[0], v[1]-y_off)
+    edges, weights = zip(*nx.get_edge_attributes(poly.G,'weight').items())
+    nx.draw(poly.G, pos, node_size=10, ax=ax, edgelist=edges, edge_color=weights, edge_cmap=plt.cm.tab10)
+    nx.draw_networkx_labels(poly.G, pos_higher, ax=ax)
+    plt.show()
+    
 
 
 def lower_upper(points, event, G):
     vA, vB = tuple(G.adj[event])
     if points[vA][1] > points[vB][1]:
         lower, upper = vA, vB
+        entering, leaving = vA, vB
     else:
         lower, upper = vB, vA
-    return lower, upper
+        entering, leaving = vA, vB
+    return lower, upper, entering, leaving
 
 def check_edge(x, edge, points):
     if points[edge[0]][0] > x and x > points[edge[1]][0]:
@@ -485,61 +513,120 @@ def check_edge(x, edge, points):
 
 def get_intersects(event, G, points):
     x, y = points[event][0], points[event][1]
-    intersects = []
+    collisions = []
     # get all intersects
     for edge in G.edges():
         if check_edge(x, edge, points):
             # get the point of intersection
             ipt = intersect_line(x, points[edge[0]], points[edge[1]])
-            # store its x, y, edge1 idx, edge2 idx
-            intersects.append(ipt + [edge[0]] + [edge[1]] + [G[edge[0]][edge[1]]['weight']])
-            # intersects.append([ipt[0], ipt[1], edge[0], edge[1]])
-    # create and sort structured array by y-coordinate
-    if intersects:
-        intersects = np.array(sorted(intersects, key=lambda t: t[1]))        
-        n = 0
-        above = intersects[n + 1,:]
-        below = intersects[n,:]
-        
-        print('\tbelow {}, y {}, above {}'.format(below[1], y, above[1]))
+            # store its x, y, edge, edgew
+            collision = {
+                'vx' : event, # the vertex associated with the collision
+                'pt' : ipt, # the point of the collision
+                'edge' : edge, # the edge with which the line collided
+                'edgew' : G[edge[0]][edge[1]]['weight'] # the weight of that edge
+            }
+            collisions.append(collision)
+    above, below = None, None
+    if collisions:
+        above = min([c for c in collisions if c['pt'][1] > y], key=lambda x: abs(x['pt'][1]-y), default=None)
+        below = min([c for c in collisions if c['pt'][1] < y], key=lambda x: abs(x['pt'][1]-y), default=None)
+    return above, below
 
-        while y > above[1]:
-            if y > intersects[-1,1]:
-                above = None
-                break
-            above = intersects[n+1,:]
-            below = intersects[n,:]
+def inflection(event, G, points):
+    a, b = get_intersects(event, G, points)
+    add = []
+    if a:
+        # add point to points list
+        points = np.concatenate([points, np.array([a['pt']])])
+        # index is the last member of new points array
+        a_i = points.shape[0] - 1
+        # add the new edge to G
+        # G.add_edge(event, a_i, weight=3)
+        G.add_edge(a_i, a['edge'][0], weight=a['edgew'])
+        G.add_edge(a_i, a['edge'][1], weight=a['edgew'])
+        G.remove_edge(a['edge'][0], a['edge'][1])
+        add.append(a_i)
+    if b:
+        points = np.concatenate([points, np.array([b['pt']])])
+        b_i = points.shape[0] - 1
+        # G.add_edge(event, b_i, weight=3)
+        G.add_edge(b_i, b['edge'][0], weight=b['edgew'])
+        G.add_edge(b_i, b['edge'][1], weight=b['edgew'])
+        G.remove_edge(b['edge'][0], b['edge'][1])
+        add.append(b_i)
+    return add, G, points
 
-            print('\tbelow='+str(below[1]))
-            print('\tabove='+str(above[1]))
-            print(n)
-            n += 1
-        if above is not None:
-            print('\tbelow {}, y {}, above {}'.format(below[1], y, above[1]))
-        print('-----')
+def check_lu(points, event, G):
+    lower, upper, entering, leaving = lower_upper(points, event, G)
+    # both right
+    if points[lower][0] > points[event][0] and points[upper][0] > points[event][0]:
+        # entering above
+        if points[entering][1] > points[leaving][1]:
+            return Event.OPEN
+        # entering below
+        else:
+            return Event.SPLIT
+    # both left
+    elif points[lower][0] < points[event][0] and points[upper][0] < points[event][0]:
+        # entering above
+        if points[entering][1] > points[leaving][1]:
+            return Event.MERGE
+        # entering below
+        else:
+            return Event.CLOSE
 
-    
+
+    # lower right, upper left
+    elif points[lower][0] > points[event][0] and points[upper][0] < points[event][0]:
+        return Event.INFLECTION
+    # lower left, upper right
+    elif points[lower][0] < points[event][0] and points[upper][0] > points[event][0]:
+        return Event.INFLECTION
 
 
 def process_events(E, O, C, points, G):
-    contains_split_merge = False
+    split_merge = False
     for event in E:
-        l, u = lower_upper(points, event, G)
-        
-        # SPLIT
-        if points[l][0] > points[event][0] and points[u][0] > points[event][0]:
-            contains_split_merge = True
-            # Create Intersection and add it to E
-            get_intersects(event, poly.G, points)
-        
-        # MERGE
-        elif points[l][0] < points[event][0] and points[u][0] < points[event][0]:
-            contains_split_merge = True
-            # Create intersection and add it to E
-            get_intersects(event, poly.G, points)
-        
-        elif points[l][0] < points[event][0] and points[u][0] > points[event][0]:
+        E_add = []
+        event_type = check_lu(points, event, G)
+        print('{}: {}'.format(event, event_type))
+        if event_type == Event.SPLIT:
+            split_merge = True
+            add, G, points = inflection(event, G, points)
+            E_add.extend(add)
+        elif event_type == Event.MERGE:
+            split_merge = True
+            add, G, points = inflection(event, G, points)
+            E_add.extend(add)
+    E.extend(E_add)
+    for event in E:
+        event_type = check_lu(points, event, G)
+        if event_type == Event.OPEN:
+            O.append([event])
+        elif event_type == Event.CLOSE:
+            pass
+        elif event_type == Event.INFLECTION:
+            for cell in O:
+                print('Cell:')
+                for v in cell:
+                    print('\tv={}, {}'.format(v, G.adj[event]))
+
+
+
+
+    if E_add:
+        # add new points to E
+        E.extend(E_add)
+        # sort by y-position        
+        E = sorted(E, key=lambda e: points[e][1])
+
+
+
+    return E, O, C, points, G
+
             
+    
 
 
 
@@ -683,7 +770,7 @@ def bcd(poly, ax):
 
 
 if __name__ == '__main__':
-    poly = ConvPolygon(points=(3, 10, 1, 1), jaggedness=8, holes=3)
+    poly = ConvPolygon(points=(3, 14, 1, 1), jaggedness=12, holes=3)
     fig = plt.figure()
     # ax1 = fig.add_subplot(121)
     # poly.chart(ax1)
