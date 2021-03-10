@@ -10,8 +10,8 @@ import networkx as nx
 from collections import defaultdict
 from enum import Enum
 
+np.random.seed(3)
 
-# np.random.seed(42)
 class Event(Enum):
     CLOSE=1
     OPEN=2
@@ -470,10 +470,13 @@ def line_sweep(poly, ax):
     O = []
     # List of closed cells
     C = []
-    for i, v in enumerate(L[:-1]):
-        E = [L[i+1]]
+    for i, v in enumerate(L):
+        E = [L[i]]
         E, O, C, poly.points, poly.G = process_events(E, O, C, poly.points, poly.G)
     
+
+
+
     ### Plotting stuff
     # get vertices and sort by x position
     pos = {}
@@ -482,26 +485,17 @@ def line_sweep(poly, ax):
     pos_higher = {}
     offmax = np.max(poly.points[:,1])
     offmin = np.min(poly.points[:,1])
-    y_off = (offmax - offmin) * 0.03
+    y_off = (offmax - offmin) * 0.04
     # offset on the y axis
     for k, v in pos.items():
         pos_higher[k] = (v[0], v[1]-y_off)
     edges, weights = zip(*nx.get_edge_attributes(poly.G,'weight').items())
     nx.draw(poly.G, pos, node_size=10, ax=ax, edgelist=edges, edge_color=weights, edge_cmap=plt.cm.tab10)
-    nx.draw_networkx_labels(poly.G, pos_higher, ax=ax)
+    nx.draw_networkx_labels(poly.G, pos_higher, ax=ax, font_size=10)
     plt.show()
     
 
 
-def lower_upper(points, event, G):
-    vA, vB = tuple(G.adj[event])
-    if points[vA][1] > points[vB][1]:
-        lower, upper = vA, vB
-        entering, leaving = vA, vB
-    else:
-        lower, upper = vB, vA
-        entering, leaving = vA, vB
-    return lower, upper, entering, leaving
 
 def check_edge(x, edge, points):
     if points[edge[0]][0] > x and x > points[edge[1]][0]:
@@ -557,12 +551,23 @@ def inflection(event, G, points):
         add.append(b_i)
     return add, G, points
 
+def lower_upper(points, event, G):
+    vA, vB = tuple(G.adj[event])
+    above = False
+    if points[vA][1] > points[vB][1]:
+        lower, upper = vA, vB
+        above = False
+    else:
+        lower, upper = vB, vA
+        above = True
+    return lower, upper, above
+
 def check_lu(points, event, G):
-    lower, upper, entering, leaving = lower_upper(points, event, G)
+    lower, upper, above = lower_upper(points, event, G)
     # both right
     if points[lower][0] > points[event][0] and points[upper][0] > points[event][0]:
         # entering above
-        if points[entering][1] > points[leaving][1]:
+        if above:
             return Event.OPEN
         # entering below
         else:
@@ -570,13 +575,11 @@ def check_lu(points, event, G):
     # both left
     elif points[lower][0] < points[event][0] and points[upper][0] < points[event][0]:
         # entering above
-        if points[entering][1] > points[leaving][1]:
+        if above:
             return Event.MERGE
         # entering below
         else:
             return Event.CLOSE
-
-
     # lower right, upper left
     elif points[lower][0] > points[event][0] and points[upper][0] < points[event][0]:
         return Event.INFLECTION
@@ -590,7 +593,6 @@ def process_events(E, O, C, points, G):
     for event in E:
         E_add = []
         event_type = check_lu(points, event, G)
-        print('{}: {}'.format(event, event_type))
         if event_type == Event.SPLIT:
             split_merge = True
             add, G, points = inflection(event, G, points)
@@ -599,29 +601,36 @@ def process_events(E, O, C, points, G):
             split_merge = True
             add, G, points = inflection(event, G, points)
             E_add.extend(add)
-    E.extend(E_add)
-    for event in E:
-        event_type = check_lu(points, event, G)
-        if event_type == Event.OPEN:
-            O.append([event])
-        elif event_type == Event.CLOSE:
-            pass
-        elif event_type == Event.INFLECTION:
-            for cell in O:
-                print('Cell:')
-                for v in cell:
-                    print('\tv={}, {}'.format(v, G.adj[event]))
-
-
-
-
     if E_add:
         # add new points to E
         E.extend(E_add)
         # sort by y-position        
         E = sorted(E, key=lambda e: points[e][1])
 
-
+    print('---')
+    for event in E:
+        event_type = check_lu(points, event, G)
+        print('vert={}, type={}'.format(event, event_type))
+        if event_type == Event.OPEN:
+            O.append([event])
+            continue
+        elif event_type == Event.CLOSE:
+            for cell in O:
+                if cell[-1] in G.adj[event]:
+                    cell.append(event)
+                    C.append(cell)
+        elif event_type == Event.INFLECTION:
+            for cell in O:
+                for adj in G.adj[event]:
+                    if adj in cell:
+                        print('\tAppending...{}-->{}'.format(cell[-1], event))
+                        cell.append(event)
+    print('\tOpen:')
+    for i in O:
+        print('\t\t{}'.format(i))
+    print('\tClosed:')
+    for i in C:
+        print('\t\t{}'.format(i))
 
     return E, O, C, points, G
 
@@ -770,7 +779,7 @@ def bcd(poly, ax):
 
 
 if __name__ == '__main__':
-    poly = ConvPolygon(points=(3, 14, 1, 1), jaggedness=12, holes=3)
+    poly = ConvPolygon(points=(2, 13, 1, 1), jaggedness=9, holes=1)
     fig = plt.figure()
     # ax1 = fig.add_subplot(121)
     # poly.chart(ax1)
