@@ -11,6 +11,7 @@ class Event(Enum):
     SPLIT=3
     MERGE=4
     INFLECTION=5
+    INTERSECT=6
 
 def intersect_line(x, a, b):
     '''Check if a vertical line at x=`x` intersects
@@ -115,7 +116,7 @@ def get_intersects(event, G, points):
         below = min([c for c in collisions if c['pt'][1] < y], key=lambda x: abs(x['pt'][1]-y), default=None)
     return above, below
 
-def qcross(points, u, v, w):
+def qcross(points, u, v, w, val=False):
     '''Quick cross product of 3 points in space u, v, w
 
     Parameters
@@ -134,12 +135,22 @@ def qcross(points, u, v, w):
     Bool
         `True` if angle is positive, `False` if angle is negative.
     '''
+
     a = points[v] - points[u]
     b = points[v] - points[w]
-    if a[0] * b[1] - b[0] * a[1] >= 0:
-        return False
+    if val:
+        a = a/np.sqrt(a[0]*a[0] + a[1]*a[1])
+        b = b/np.sqrt(b[0]*b[0] + b[1]*b[1])
+
+    cross = a[0] * b[1] - b[0] * a[1]
+
+    if val:
+        return cross
     else:
-        return True
+        if cross >= 0:
+            return True
+        else:
+            return False
 
 def lower_upper(points, event, G):
     '''For an `event` (node) on DiGraph `G`, re-order the edges so that
@@ -187,10 +198,10 @@ def lower_upper(points, event, G):
 
     above = False
     if qcross(points, vA, event, vB):
-        lower, upper = vA, vB
-    else:
         above = True
         lower, upper = vB, vA
+    else:        
+        lower, upper = vA, vB
     return lower, upper, above
 
 def check_lu(points, event, G):
@@ -218,15 +229,19 @@ def check_lu(points, event, G):
     elif points[lower][0] < points[event][0] and points[upper][0] > points[event][0]:
         return Event.INFLECTION
 
-def find_splitmerges(v, A, crits, points, G):
+def node_classify(v, A, crits, vtypes, points, G):
     etype = check_lu(points, v, G)
+    add = (None, None)
     if etype == Event.SPLIT or etype == Event.MERGE:
         add, G, points = make_splitmerge_points(v, etype, G, points)
         A[v] = add
         print('\tv: {}, type: {}, new points: {}'.format(v, etype, add))
     if etype in [Event.OPEN, Event.SPLIT, Event.MERGE, Event.CLOSE]:
         crits.append((v, etype))
-    return A, crits, points, G
+    vtypes[v] = etype
+    for a in add:
+        vtypes[a] = Event.INTERSECT
+    return A, crits, vtypes, points, G
 
 def get_addpt_neighbors(a, G, want3=False):
     '''Get the neighbors of a point, `a`,
@@ -313,24 +328,63 @@ def line_sweep(poly, ax):
     C = []
     # Additional points found in splits & merges
     A = {}
-    crits = []
+    crits, vtypes = [], {}
     print('Preliminary Split/Merge Check...')
     for v in L:
-        A, crits, poly.points, poly.G = find_splitmerges(v, A, crits, poly.points, poly.G)
+        A, crits, vtypes, poly.points, poly.G = node_classify(v, A, crits, vtypes, poly.points, poly.G)
     print('Done!')
-    
-
+    '''
+    for v in crits:
+        C = process_events(v, vtypes, C, poly.points, poly.G)
+    '''
     for ci, crit in enumerate(crits):
         lookback = 1
         for critj in reversed(crits[:ci]):
             if critj[1] == Event.SPLIT or critj[1] == Event.MERGE:
                 break
             lookback += 1
-        C = process_events(crits[ci - lookback], crits[ci], C, poly.points, poly.G)
+        C = __process_events(crits[ci - lookback], crits[ci], C, poly.points, poly.G)
+    
     return C
 
 
-def process_events(v_l, v_r, C, points, G):
+def next_move(last, node, vtypes, points, G):
+    last = node
+    if vtypes[node] is not Event.INFLECTION:
+        # possible next moves
+        best = []
+        for future in G.adj[node]:
+            print(last, node, future)
+            print(points[last],points[node],points[future])
+            best.append( (future, qcross(points, last, node, future, val=True)) )
+        best = sorted([b for b in best], key=lambda b: b[1])[-1]
+    else:
+        best = list(G.adj[node])[0]
+    print('\t\tbest: {}'.format(best))
+    return node, best
+
+    
+def process_events(v, vtypes, C, points, G):
+    print('---')
+    print(v)
+    cells = []
+    for pathstart in G.adj[v[0]]:
+        print('\tstart={}'.format(pathstart))
+        u = v[0]
+        v = pathstart
+        cell = []
+        while True:
+            u, v = next_move(u, v, vtypes, points, G)
+            cell.append(v)
+            if v == pathstart:
+                break
+        cells.append(cell)
+    print(cells)
+    return C
+    
+
+
+def __process_events(v_l, v_r, C, points, G):
     leftv, rightv = v_l[0], v_r[0]
     epsilon = 1e-5
     wfunc = lambda n: points[n][0] >= points[leftv][0] - epsilon and points[n][0] <= points[rightv][0] + epsilon
@@ -365,21 +419,22 @@ def process_events(v_l, v_r, C, points, G):
 
 if __name__ == '__main__':
     seed = np.random.randint(0,1e5)
-    np.random.seed(2009)
+    np.random.seed(60431)
     # 69246
     print(seed)
 
-    poly = ConvPolygon(points=(3, 32, 1, 1), jaggedness=7, holes=3)
+    poly = ConvPolygon(points=(1, 30, 1, 1), jaggedness=3, holes=2)
 
     fig = plt.figure()
     ax1 = fig.add_subplot()
     ax1.set_aspect('equal')
-
+    poly.chart(ax1, poly.G, cm=plt.get_cmap('viridis'))
+    plt.show()
 
     
     bcd = line_sweep(poly, ax1)
     poly.chart(ax1, poly.G, cm=plt.get_cmap('viridis'))
-
+    
     row, col = 2, math.ceil(len(bcd)/2)
     fig, ax = plt.subplots(nrows=row, ncols=col)
     for i in range(row):
@@ -388,6 +443,6 @@ if __name__ == '__main__':
             if ci < len(bcd):
                 H = nx.subgraph(poly.G, bcd[ci])
                 poly.chart(ax[i,j], H)
-
+    
     plt.show()
     print(seed)
