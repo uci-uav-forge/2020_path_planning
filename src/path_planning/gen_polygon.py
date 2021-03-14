@@ -1,3 +1,27 @@
+'''
+Polygon Generation Module
+
+This module generates random "interesting" (non-convex) polygons. It
+works by building a cluster of [x,y] point pairs, calculating a Delaunay
+Triangulation of the cluster, and randomly removing traingles from the
+edge of the cluster. Degenerate polygons are avoided:
+
+    - Polygons with only a single point touching two parts of the poly
+    - Polygons which are actually split into multiple polygons
+    - Polygons whose edges cross over one another
+
+The choice of clustering algorithm influences how polygons are formed,
+because they influence initial Delaunay Triangulation.
+
+Polygons contain:
+
+    - a "master" list of points which includes interior points
+    - a networkX graph of points organized by index
+    - a list of list of boundaries (lines) for each edge 
+    - a list of list of points which are outer bounds and holes
+
+Written by Mike Sutherland
+'''
 import numpy as np
 import networkx as nx
 from datetime import datetime
@@ -12,7 +36,6 @@ class ConvPolygon(object):
         self.gen_poly(jaggedness=jaggedness, holes=holes)
         self.blist = self.make_boundaries()
         self.G = self.shape_graph()
-        self.custom = False
         
     def gen_cluster_points(self, no_clusters, cluster_n, cluster_size, cluster_dist):
         '''Generate clusters of normally distributed points
@@ -32,8 +55,8 @@ class ConvPolygon(object):
 
         Returns
         -------
-        [type]
-            [description]
+        Mx2 np.array
+            list of M xy points --> M x 2
         '''
         pts = np.zeros((no_clusters * cluster_n, 2))
         loc = np.array([0,0], dtype='float64')
@@ -68,8 +91,6 @@ class ConvPolygon(object):
             else:
                 weight = int(2)
                 flip = False
-
-            
             # build the boundary
             for k, v in boundary.items():
                 nlist.append(k)
@@ -168,29 +189,21 @@ class ConvPolygon(object):
         centr = self.centroid(centers)
         colors = np.array([ (x - centr[0])**2 + (y - centr[1])**2 for x, y in centers])
         ax.tripcolor(self.dt.points[:,0], self.dt.points[:,1], self.dt.simplices, facecolors=colors, cmap='YlGn', edgecolors='darkgrey')
-        
-        
         ax.set_aspect('equal')
         ax.set_facecolor('lightblue')
-    
-    def first(self, s):
-        '''
-        get first item of collection
-        '''
-        return next(iter(s))
 
     def chart(self, ax, G, cm=plt.cm.tab10):
+        '''
+        Plot the graph `G` on `ax`
+        '''
         pos = {}
         for n in self.G.nodes:
             pos[n] = self.points[n]
-        
         edges, weights = zip(*nx.get_edge_attributes(G, 'weight').items())
         nx.draw(G, pos, node_size=16, ax=ax, edgelist=edges, edge_color=weights, edge_cmap=cm)
         ax.set_aspect('equal')
-            
         def offset(ax, x, y):
             return offset_copy(ax.transData, x=x, y=y, units='dots')
-
         for n in G.nodes:
             x, y = self.points[n][0], self.points[n][1]
             ax.text(x, y, str(n), fontsize=9, transform=offset(ax, 0, 5))
@@ -218,6 +231,9 @@ class ConvPolygon(object):
         return a * b * c / ( (b + c - a) * (c + a - b) * (a + b - c) )
 
     def order_boundaries(self):
+        '''
+        Order the boundaries by their topological structure
+        '''
         is_outer = np.asarray(self.dt.neighbors == -1, dtype='bool')
         tris = [list(x.compressed()) for x in np.ma.MaskedArray(self.dt.simplices, is_outer)]
         graph = {}
@@ -257,6 +273,10 @@ class ConvPolygon(object):
         return ordered_objs
 
     def make_boundaries(self):
+        '''=create boundary dict structure
+        keys are boundary point idx
+        values are tuple (prev idx, next idx, bool outer)
+        '''
         boundaries = []
         # find point with min x val
         min_p = np.argmax(self.dt.points, axis=0)
@@ -292,6 +312,11 @@ class ConvPolygon(object):
         return check
 
     def gen_poly(self, jaggedness, holes=0):
+        '''
+        Generate the polgyon. This algorithm is _very_ slow, it probably has n^3
+        time complexity or something like that. It works up to polygons of about 3
+        or 400 points or less.
+        '''
         tic = datetime.now()
         self.dt = spatial.Delaunay(self.points)
         n_edges = self.count_outer_edges()
@@ -304,7 +329,6 @@ class ConvPolygon(object):
             self.del_tri(rm)
         # jaggedness
         edges_desired = int(n_edges * (jaggedness + 1))
-        
         while n_edges < edges_desired:
             rm = None
             # get 1-edge tris by aspect ratio
