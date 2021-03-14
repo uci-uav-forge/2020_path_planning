@@ -116,7 +116,7 @@ def get_intersects(event, G, points):
         below = min([c for c in collisions if c['pt'][1] < y], key=lambda x: abs(x['pt'][1]-y), default=None)
     return above, below
 
-def qcross(points, u, v, w, val=False):
+def qcross(points, u, v, w):
     '''Quick cross product of 3 points in space u, v, w
 
     Parameters
@@ -138,19 +138,11 @@ def qcross(points, u, v, w, val=False):
 
     a = points[v] - points[u]
     b = points[v] - points[w]
-    if val:
-        a = a/np.sqrt(a[0]*a[0] + a[1]*a[1])
-        b = b/np.sqrt(b[0]*b[0] + b[1]*b[1])
 
-    cross = a[0] * b[1] - b[0] * a[1]
-
-    if val:
-        return cross
+    if a[0] * b[1] - b[0] * a[1] >= 0:
+        return True
     else:
-        if cross >= 0:
-            return True
-        else:
-            return False
+        return False
 
 def lower_upper(points, event, G):
     '''For an `event` (node) on DiGraph `G`, re-order the edges so that
@@ -240,7 +232,8 @@ def node_classify(v, A, crits, vtypes, points, G):
         crits.append((v, etype))
     vtypes[v] = etype
     for a in add:
-        vtypes[a] = Event.INTERSECT
+        if a is not None:
+            vtypes[a] = Event.INTERSECT
     return A, crits, vtypes, points, G
 
 def get_addpt_neighbors(a, G, want3=False):
@@ -333,7 +326,7 @@ def line_sweep(poly, ax):
     for v in L:
         A, crits, vtypes, poly.points, poly.G = node_classify(v, A, crits, vtypes, poly.points, poly.G)
     print('Done!')
-    '''
+    
     for v in crits:
         C = process_events(v, vtypes, C, poly.points, poly.G)
     '''
@@ -344,42 +337,55 @@ def line_sweep(poly, ax):
                 break
             lookback += 1
         C = __process_events(crits[ci - lookback], crits[ci], C, poly.points, poly.G)
-    
+    '''
     return C
 
+def right_turn(points, u, v, w):
+    a = points[v] - points[u]
+    b = points[w] - points[v]
+    a = a/np.linalg.norm(a)
+    b = b/np.linalg.norm(b)
+    return a[0] * b[1] - b[0] * a[1]
 
-def next_move(last, node, vtypes, points, G):
-    last = node
-    if vtypes[node] is not Event.INFLECTION:
-        # possible next moves
-        best = []
-        for future in G.adj[node]:
-            print(last, node, future)
-            print(points[last],points[node],points[future])
-            best.append( (future, qcross(points, last, node, future, val=True)) )
-        best = sorted([b for b in best], key=lambda b: b[1])[-1]
-    else:
-        best = list(G.adj[node])[0]
-    print('\t\tbest: {}'.format(best))
-    return node, best
-
-    
 def process_events(v, vtypes, C, points, G):
     print('---')
     print(v)
-    cells = []
-    for pathstart in G.adj[v[0]]:
-        print('\tstart={}'.format(pathstart))
-        u = v[0]
-        v = pathstart
-        cell = []
-        while True:
-            u, v = next_move(u, v, vtypes, points, G)
-            cell.append(v)
-            if v == pathstart:
-                break
-        cells.append(cell)
-    print(cells)
+    prev_node = v[0] # inititate prior for c product
+    for path_start in G.adj[v[0]]:
+        print('\tPath Start: {}'.format(path_start))
+        path_end = False
+        path = []
+        # start the path
+        node = path_start
+        n = 0
+        while path_end == False:
+            cvals = []
+            for possible_node in G.adj[node]:
+                if possible_node != prev_node:
+                    # calculate cross product and append
+                    cval = right_turn(points, prev_node, node, possible_node)
+                    cvals.append( (possible_node, cval) )
+            
+            cvals = sorted([cval for cval in cvals], key=lambda t: t[1])
+            # choose node with most CW pointing cval
+            best = cvals[0][0]
+            print('\t\tCvals: {} --> Best: {}'.format(cvals, best))
+            # replace previous with current
+            prev_node = node
+            # replace node with the one we chose
+            node = best
+            # append to list
+            path.append(best)
+            # if we're back at the original node, then we know we have formed a loop
+            # and therefore have formed a cell!
+            if best == path_start:
+                print('\t\tPath Closed --> Loop Created')
+                path_end = True
+            elif n >= 1e5:
+                raise(Exception('Path Not Closed --> Exceeded Max Path Length!'))
+            n += 1
+        if set(path) not in C:
+            C.append(set(path))
     return C
     
 
@@ -423,26 +429,25 @@ if __name__ == '__main__':
     # 69246
     print(seed)
 
-    poly = ConvPolygon(points=(1, 30, 1, 1), jaggedness=3, holes=2)
-
-    fig = plt.figure()
-    ax1 = fig.add_subplot()
-    ax1.set_aspect('equal')
-    poly.chart(ax1, poly.G, cm=plt.get_cmap('viridis'))
-    plt.show()
-
+    colormap = plt.get_cmap('viridis')
+    poly = ConvPolygon(points=(3, 30, 10, 40), jaggedness=10, holes=5)
+    fig0, fig1, fig2 = plt.figure('Input Shape'), plt.figure('Cell Decomposition'), plt.figure('Cells')
+    ax0 = fig0.add_subplot()
     
+    poly.chart(ax0, poly.G, cm=colormap)
+    ax1 = fig1.add_subplot()
     bcd = line_sweep(poly, ax1)
-    poly.chart(ax1, poly.G, cm=plt.get_cmap('viridis'))
-    
-    row, col = 2, math.ceil(len(bcd)/2)
-    fig, ax = plt.subplots(nrows=row, ncols=col)
+    poly.chart(ax1, poly.G, cm=colormap)
+
+    nrows = 3
+    row, col = 3, math.ceil(len(bcd)/3)
+    ax2 = fig2.subplots(nrows=row, ncols=col)
     for i in range(row):
         for j in range(col):
             ci = i*col + j
             if ci < len(bcd):
                 H = nx.subgraph(poly.G, bcd[ci])
-                poly.chart(ax[i,j], H)
+                poly.chart(ax2[i,j], H)
     
     plt.show()
     print(seed)
