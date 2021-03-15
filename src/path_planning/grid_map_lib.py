@@ -16,8 +16,7 @@ class GridMap:
     GridMap class
     """
 
-    def __init__(self, width, height, resolution,
-                 center_x, center_y, init_val=0.0):
+    def __init__(self, width, height, resolution, center_x, center_y, init_val=0.0):
         """__init__
 
         :param width: number of grid for width

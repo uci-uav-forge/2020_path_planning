@@ -6,6 +6,7 @@ import networkx as nx
 import math, itertools, string, copy
 from matplotlib.transforms import offset_copy
 from matplotlib.collections import LineCollection
+import matplotlib
 
 plt.rcParams['figure.facecolor'] = 'grey'
 
@@ -39,7 +40,11 @@ class World(object):
         # the structural graph of the world
         self.G = copy.deepcopy(poly.G)
         # list of sets() which represent a cell
-        self.cells = self._line_sweep(theta)
+        self.cells, self.cells_list = self._line_sweep(theta)
+        # dict of cell points by cell idx
+        self.cell_points = {}
+        for i, cell in enumerate(self.cells):
+            self.cell_points[i] = np.array(self.points[list(cell)])
         # reebgraph object
         self.Rg = self._build_reebgraph()
         # sweep line direction
@@ -273,16 +278,17 @@ class World(object):
         L = sorted(self.G.nodes, key=lambda t: self.points[t,0])
         # List of closed cells
         C = []
+        C_list = []
         # Additional points found in splits & merges
         A = {}
         crits, vtypes = [], {}
         for v in L:
             A, crits, vtypes = self._node_classify(v, A, crits, vtypes)        
         for v in crits:
-            C = self._process_events(v, vtypes, C)
+            C, C_list = self._process_events(v, vtypes, C, C_list)
         # rotate back
         self.points = np.dot(self.points, self._make_rot_matrix(-theta))
-        return C
+        return C, C_list
 
     def _right_turn(self, u, v, w):
         a = self.points[v] - self.points[u]
@@ -291,7 +297,7 @@ class World(object):
         b = b/np.linalg.norm(b)
         return a[0] * b[1] - b[0] * a[1]
 
-    def _process_events(self, v, vtypes, C):
+    def _process_events(self, v, vtypes, C, C_list):
         prev_node = v[0] # inititate prior for c product
         for path_start in self.G.adj[v[0]]:
             path_end = False
@@ -325,7 +331,8 @@ class World(object):
                 n += 1
             if set(path) not in C:
                 C.append(set(path))
-        return C
+                C_list.append(path)
+        return C, C_list
 
     def cell_chart(self):
         sq = math.ceil(np.sqrt(len(self.cells)))
@@ -355,24 +362,7 @@ class World(object):
             x, y = self.points[n,0], self.points[n,1]
             ax.text(x, y, str(n), fontsize=9, transform=offset(ax, 0, 5), ha='center', va='center')
     
-    def world_chart(self, ax):
-        cm = plt.get_cmap('viridis')
-        pos = {}
-        H = nx.to_undirected(self.G)
-        for n in H.nodes:
-            pos[n] = [self.points[n,0], self.points[n,1]]
-        edges, weights = zip(*nx.get_edge_attributes(H, 'weight').items())
-        nx.draw(H, pos, node_size=16, ax=ax, edgelist=edges, edge_color=weights, edge_cmap=cm)
-        ax.set_aspect('equal')
-        def offset(ax, x, y):
-            return offset_copy(ax.transData, x=x, y=y, units='dots')
-        for n in H.nodes:
-            x, y = self.points[n,0], self.points[n,1]
-            ax.text(x, y, str(n), fontsize=8, transform=offset(ax, 0, 5), ha='center', va='center')
-        for i, cell in enumerate(self.cells):
-            centr = self._cell_centroid(cell)
-            ax.text(centr[0], centr[1], str(self._int_to_alph(i+1)), fontsize=14, ha='center', va='center')
-        
+    
     @staticmethod
     def _int_to_alph(x):
         result = []
@@ -422,22 +412,23 @@ class World(object):
         node_data, edges = {}, []
         for i, ci in enumerate(self.cells):
             for j, cj in enumerate(self.cells):
-                common_edge = ci & cj
-                if len(common_edge) >= 2:
-                    e = (i, j)
-                    node_data[i] = {
-                        'cell' : ci,
-                        'centroid' : self._cell_centroid(ci),
-                        'name' : self._int_to_alph(i+1)
-                        }
-                    node_data[j] = {
-                        'cell' : cj,
-                        'centroid' : self._cell_centroid(cj),
-                        'name' : self._int_to_alph(j + 1)
-                        }
-                    edges.append(e)
+                if i != j:
+                    common_edge = ci & cj
+                    if len(common_edge) >= 2:
+                        e = (i, j, common_edge)
+                        node_data[i] = {
+                            'cell' : ci,
+                            'centroid' : self._cell_centroid(ci),
+                            'name' : self._int_to_alph(i+1)
+                            }
+                        node_data[j] = {
+                            'cell' : cj,
+                            'centroid' : self._cell_centroid(cj),
+                            'name' : self._int_to_alph(j + 1)
+                            }
+                        edges.append(e)
         # build RG
-        Rg.add_edges_from(edges)
+        Rg.add_weighted_edges_from(edges, weight='common')
         nx.set_node_attributes(Rg, node_data)
         return Rg
     
@@ -445,6 +436,63 @@ class World(object):
         ctr = np.sum(self.points[list(cell)], axis=0) / len(list(cell))
         return [ctr[0,0], ctr[0,1]]
                     
+    @staticmethod
+    def draw_graph(self, ax, node_text=False, cell_text=False, **kwargs):
+        cm = plt.get_cmap('viridis')
+        pos = {}
+        H = nx.to_undirected(self.G)
+        # Nodes
+        for n in H.nodes:
+            pos[n] = (self.points[n,0], self.points[n,1])
+        xy = np.asarray([pos[v] for v in self.G.nodes])
+        node_collection = ax.scatter(
+            xy[:, 0],
+            xy[:, 1],
+            c='k',
+            marker='.',
+            zorder=2)
+        ax.tick_params(axis="both", which="both", bottom=False, left=False, labelbottom=False, labelleft=False)
+        # Node Text
+        if node_text:
+            def offset(ax, x, y):
+                return offset_copy(ax.transData, x=x, y=y, units='dots')
+            for n in H.nodes:
+                ax.text(*pos[n], str(n), fontsize=8, transform=offset(ax, 0, 5), ha='center', va='center')
+        if cell_text:
+            for i, cell in enumerate(self.cells):
+                centr = self._cell_centroid(cell)
+                ax.text(centr[0], centr[1], str(self._int_to_alph(i+1)), fontsize=13, ha='center', va='center')
+
+        # Edges:
+        edge_styles, edge_pos, edge_cols = [], [], []
+        sty_by_weight = {
+            1 : '-',
+            2 : '-',
+            3 : ':',
+            4 : ':',
+        }
+        col_by_weight = {
+            1: 'k',
+            2: 'k',
+            3: 'blue',
+            4: 'blue',
+        }
+
+        for e in self.G.edges(data=True):
+            weight = e[2]['weight']
+            x, y = pos[e[0]], pos[e[1]]
+            edge_styles.append(sty_by_weight[ weight ])
+            edge_cols.append( col_by_weight[ weight ])
+            edge_pos.append( [x,y] )
+
+        edge_collection = LineCollection(
+            np.array(edge_pos),
+            zorder=1,
+            linestyles=edge_styles,
+            colors=edge_cols
+        )
+        ax.add_collection(edge_collection)
+        return ax
 
 if __name__ == '__main__':
     print('nothing')
