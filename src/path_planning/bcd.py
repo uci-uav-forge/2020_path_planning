@@ -58,10 +58,7 @@ class World(object):
             'min_cell_width' : min([d['w'] for d in [*self.cell_bboxes.values()]]),
             'avg_cell_aspect': sum([d['w']/d['h'] for d in [*self.cell_bboxes.values()]]) / len(self.cells),
             'min_cell_aspect': min([d['w']/d['h'] for d in [*self.cell_bboxes.values()]]),
-            'estrada' : nx.estrada_index(self.Rg),
             'no_cells' : len(self.cells),
-            'weiner' : nx.wiener_index(self.Rg),
-            'assortivity_coeff' : nx.degree_assortativity_coefficient(self.Rg),
             'degrees' : sum([self.Rg.degree[n] for n in self.Rg.nodes]),
             'area_variance' : np.var(np.array(self.cell_areas()))
         }
@@ -402,97 +399,149 @@ class World(object):
                     color='k'
                 )
 
-        
     def _build_reebgraph(self):
-        Rg = nx.Graph()
-        subgraph_list = []
-        for c in self.cells:
-            subgraph_list.append(nx.subgraph(self.G, c))
-        
-        node_data, edges = {}, []
-        for i, ci in enumerate(self.cells):
-            for j, cj in enumerate(self.cells):
-                if i != j:
-                    common_edge = ci & cj
-                    if len(common_edge) >= 2:
-                        e = (i, j, common_edge)
+        edges, node_data = [], {}
+        for i, A in enumerate(self.cells_list):
+            for j, B in enumerate(self.cells_list):
+                G = self.G
+                P, Q = G.subgraph(A), G.subgraph(B)
+                for e1, e2 in zip(P.edges, Q.edges):
+                    if i != j and set(e1) == set(e2):
+                        e = (i,j, e1)
                         node_data[i] = {
-                            'cell' : ci,
-                            'centroid' : self._cell_centroid(ci),
+                            'cell' : A,
                             'name' : self._int_to_alph(i+1)
                             }
                         node_data[j] = {
-                            'cell' : cj,
-                            'centroid' : self._cell_centroid(cj),
-                            'name' : self._int_to_alph(j + 1)
+                            'cell' : B,
+                            'name' : self._int_to_alph(j+1)
                             }
                         edges.append(e)
-        # build RG
+        Rg = nx.Graph()
         Rg.add_weighted_edges_from(edges, weight='common')
         nx.set_node_attributes(Rg, node_data)
+        for n in Rg.nodes:
+            Rg.nodes[n]['center'] = np.array(centroid(self.points, index=Rg.nodes[n]['cell']).T)
         return Rg
     
     def _cell_centroid(self, cell):
         ctr = np.sum(self.points[list(cell)], axis=0) / len(list(cell))
         return [ctr[0,0], ctr[0,1]]
-                    
-    @staticmethod
-    def draw_graph(self, ax, node_text=False, cell_text=False, **kwargs):
-        cm = plt.get_cmap('viridis')
-        pos = {}
-        H = nx.to_undirected(self.G)
-        # Nodes
-        for n in H.nodes:
-            pos[n] = (self.points[n,0], self.points[n,1])
-        xy = np.asarray([pos[v] for v in self.G.nodes])
-        node_collection = ax.scatter(
-            xy[:, 0],
-            xy[:, 1],
-            c='k',
-            marker='.',
-            zorder=2)
-        ax.tick_params(axis="both", which="both", bottom=False, left=False, labelbottom=False, labelleft=False)
-        # Node Text
-        if node_text:
-            def offset(ax, x, y):
-                return offset_copy(ax.transData, x=x, y=y, units='dots')
-            for n in H.nodes:
-                ax.text(*pos[n], str(n), fontsize=8, transform=offset(ax, 0, 5), ha='center', va='center')
-        if cell_text:
-            for i, cell in enumerate(self.cells):
-                centr = self._cell_centroid(cell)
-                ax.text(centr[0], centr[1], str(self._int_to_alph(i+1)), fontsize=13, ha='center', va='center')
 
-        # Edges:
-        edge_styles, edge_pos, edge_cols = [], [], []
-        sty_by_weight = {
-            1 : '-',
-            2 : '-',
-            3 : ':',
-            4 : ':',
-        }
-        col_by_weight = {
-            1: 'k',
-            2: 'k',
-            3: 'blue',
-            4: 'blue',
-        }
+def centroid(points, index=None):
+    '''centroid of Mx2 array of points'''
+    if index:
+        return np.sum(points[index], axis=0) / len(index)
+    else:
+        return np.sum(points, axis=0) / points.shape[0]
 
-        for e in self.G.edges(data=True):
-            weight = e[2]['weight']
-            x, y = pos[e[0]], pos[e[1]]
-            edge_styles.append(sty_by_weight[ weight ])
-            edge_cols.append( col_by_weight[ weight ])
-            edge_pos.append( [x,y] )
+def draw_graph(ax, G, points, **kwargs):
+    '''Draw a graph `G` containing indices to Mx2 xy points `points` on ax `ax`.
 
-        edge_collection = LineCollection(
-            np.array(edge_pos),
-            zorder=1,
-            linestyles=edge_styles,
-            colors=edge_cols
-        )
-        ax.add_collection(edge_collection)
-        return ax
+    Node args:
+        `node_color`, `node_marker`, `node_text`, `node_text_size`
+
+    Cell args
+        `cell_text`, `cell_text_size`, `cells`
+
+    Edge args
+        `edge_styles`, `edge_colors`, `edge_width`
+
+    Save args
+        `save`, `savepath`, `figure_title`
+
+    '''
+    
+    ax.set_aspect('equal')
+    points = np.array(points)
+    xpmax, xpmin = np.max(points[:,0], axis=0), np.min(points[:,0], axis=0)
+    ypmax, ypmin = np.max(points[:,1], axis=0), np.min(points[:,1], axis=0)
+    xmargin = (xpmax - xpmin) * 0.1
+    ymargin = (ypmax - ypmin) * 0.1
+    ax.set_xlim( (xpmin - xmargin, xpmax + xmargin) )
+    ax.set_ylim( (ypmin - ymargin, ypmax + ymargin) )
+    
+    cm = plt.get_cmap('viridis')
+    G = nx.to_undirected(G)
+    # Misc graph stuff
+    chart_name = kwargs.pop('chart_name', None)
+    if chart_name:
+        ax.set_title(chart_name)
+    
+    
+    # Nodes
+    node_color = kwargs.pop('node_color', 'k')
+    node_marker = kwargs.pop('node_marker', '.')
+    node_text = kwargs.pop('node_text', False)
+    node_text_size = kwargs.pop('cell_text', 8)
+    cell_text = kwargs.pop('cell_text', False)
+    cell_text_size = kwargs.pop('cell_text_size', 16)
+    cells = kwargs.pop('cells', None)
+
+    
+    if ('cell_text_size' in kwargs or 'cell_text' in kwargs) and not cells:
+        raise(ValueError('You passed an arg that requires cells to also be passed.'))
+    offset = lambda ax, x, y: offset_copy(ax.transData, x=x, y=y, units='dots')
+    p_xy = np.squeeze(np.array([points[n] for n in G.nodes]))
+    node_collection = ax.scatter(p_xy[:, 0], p_xy[:, 1], c=node_color, marker=node_marker, zorder=2)
+    ax.tick_params(axis="both", which="both", bottom=False, left=False, labelbottom=False, labelleft=False)
+    # Node Text
+    
+    if node_text:
+        for n in G.nodes:
+            ax.text(points[n,0], points[n,1], str(n), fontsize=node_text_size, transform=offset(ax, 0, node_text_size), ha='center', va='center')
+    if cell_text:
+        for i, cell in enumerate(cells):
+            centr = centroid(points, index=cell)
+            ax.text(centr[0], centr[1], str(i), fontsize=cell_text_size, transform=offset(ax, 0, cell_text_size), ha='center', va='center')
+    
+    edge_styles = kwargs.pop('edge_styles', ('-','-',':',':'))
+    edge_colors = kwargs.pop('edge_colors', ('k', 'k', 'g', 'g'))
+    edge_width = kwargs.pop('edge_width', 1)
+
+    # Edges:
+    sty_by_weight = {
+        1 : edge_styles[0],
+        2 : edge_styles[1],
+        3 : edge_styles[2],
+        4 : edge_styles[3],
+    }
+    col_by_weight = {
+        1 : edge_colors[0],
+        2 : edge_colors[1],
+        3 : edge_colors[2],
+        4 : edge_colors[3]
+    }
+    edge_cols, edge_stys = [], []
+    for e in G.edges(data=True):
+        try:
+            edge_stys.append(sty_by_weight[ e[2]['weight'] ])
+            edge_cols.append(col_by_weight[ e[2]['weight'] ])
+        except KeyError:
+            edge_stys.append(sty_by_weight[1])
+            edge_cols.append(col_by_weight[1])
+
+    lines = np.squeeze(np.array([ [points[e[0]], points[e[1]]] for e in G.edges]))
+    edge_collection = LineCollection(
+        lines,
+        zorder = 1,
+        linestyles = edge_stys,
+        colors = edge_cols,
+        linewidths = edge_width
+    )
+    ax.add_collection(edge_collection)
+    save = kwargs.pop('save', False)
+    savepath = kwargs.pop('savepath', None)
+    fig_title = kwargs.pop('figure_title', chart_name)
+    if save and not 'savepath' in kwargs:
+        raise(ValueError('You passed `save` but are missing `savepath`!'))
+    if save:
+        savefig_kwargs = kwargs
+        savefig_kwargs['save'], savefig_kwargs['savepath'] = False, None
+        fig2, ax2 = plt.subplots()
+        ax2.draw_graph(ax2, G, points, **savefig_kwargs)
+        fig2.save(savepath, format='png', facecolor='grey')
+    return ax
 
 if __name__ == '__main__':
     print('nothing')

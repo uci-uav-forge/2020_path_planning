@@ -47,8 +47,7 @@ class SweepSearcher:
                 # moving backward
                 next_c_x_index = -self.moving_direction + c_x_index
                 next_c_y_index = c_y_index
-                if grid_map.check_occupied_from_xy_index(next_c_x_index,
-                                                         next_c_y_index):
+                if grid_map.check_occupied_from_xy_index(next_c_x_index, next_c_y_index):
                     # moved backward, but the grid is occupied by obstacle
                     return None, None
             else:
@@ -250,29 +249,58 @@ class PathAnimator(object):
     def __init__(self):
         pass
 
-    def animate(self, path, world, fig, ax, save=False, **kwargs):
+    def animate(self, path, world, fig, ax1, ax2, save=False, **kwargs):
+        tour = []
+        rg_node = []
+        for cell, i in path:
+            rg_node.extend([i] * cell.shape[0])
+        path = np.concatenate([p[0] for p in path], axis=0)
+        print(len(rg_node))
         print(path.shape)
+
         cmap = plt.get_cmap('viridis')
         plt.gcf()
         path_linecoll = matplotlib.collections.LineCollection( 
-                path, 
-                linestyle='-', 
-                color='darkred',
-                linewidth=1,
-                capstyle='round',
-                joinstyle='round',
-                )
+            path, 
+            linestyle='-', 
+            color='red',
+            linewidth=1,
+            capstyle='round',
+            joinstyle='round',
+            animated=True,
+            )
+        scale = (ax2.get_xlim()[1] - ax2.get_xlim()[0]) * 0.02
+        
+        rg_circle = matplotlib.patches.Ellipse(
+            (1e5,1e5),
+            width=scale,
+            height=scale,
+            animated=True,
+            fill=True,
+            hatch='+',
+            zorder=4,
+            linewidth=
+            None,
+            color='red'
+        )
+
+
         path_linecoll.set_animated(True)
         frames = path.shape[0]
         def initframe():
-            ax.add_artist(path_linecoll)
-            return path_linecoll,
+            ax1.add_artist(path_linecoll)
+            ax2.add_patch(rg_circle)
+            return path_linecoll, rg_circle
             
         def drawframe(i):
-            ax.draw_artist(path_linecoll)
+            ax1.draw_artist(path_linecoll)
+            ax2.draw_artist(rg_circle)
             pts = np.array(world.points)
             path_linecoll.set_segments( [path[:i,:]] )
-            return path_linecoll,
+            rg_center = world.Rg.nodes[rg_node[i]]['center']
+            rg_circle.set_center((rg_center[0], rg_center[1]))
+            return path_linecoll, rg_circle
+
 
         if save:
             # for some reason, calling plt.show() makes saving the animation possible... I don't get it but whatever
