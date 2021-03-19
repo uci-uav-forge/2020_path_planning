@@ -10,8 +10,8 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import copy
 
-poly = ConvPolygon(points=(2, 19, 5, 10), jaggedness=3, holes=1)
-angles = np.linspace(0, np.pi, 60)
+poly = ConvPolygon(points=(4, 14, 1, 1), jaggedness=2, holes=2)
+angles = np.linspace(0, np.pi, 180)
 worlds = []
 print('building worlds...')
 for angle in angles:
@@ -19,7 +19,7 @@ for angle in angles:
     print(angle * 180/np.pi, end='\r', flush=True)
     w = World(poly=poly, theta=angle)
     worlds.append( w )
-    print(w.scalar_qualities['min_cell_width'])
+    print(w.scalar_qualities['avg_cell_aspect'])
 print('done!')
 
 
@@ -30,7 +30,7 @@ cwsorted = sorted([ w for w in worlds], key=q_function)
 best = cwsorted[-1]
 # metric lowest
 worst = cwsorted[0]
-world = worst
+world = best
 
 
 print('World with angle={} chosen.'.format(world.theta))
@@ -49,7 +49,8 @@ def centroid(ci):
 celldata = {}
 
 def get_path(world):
-    cellidx = list(world.Rg.edges)
+    cellidx = list(nx.edge_dfs(world.Rg))
+    print(cellidx)
     cell_path_data = []
     entire = []
     for i, edge in enumerate(cellidx):
@@ -58,27 +59,25 @@ def get_path(world):
         commonA, commonB = tuple(world.Rg[u][v]['common'])
         # visit cell border
         cellbord = world.points[commonB] + 0.5 * (world.points[commonA] - world.points[commonB])
-        if v not in cell_visited:
-            # go to center first
-            centry = np.linspace(cellbord, centroid(v), 50)
+        # go to center
+        centry = np.linspace(cellbord, centroid(v), 12)
+        if v not in cell_visited:            
             cell_pts = np.array(world.points[world.cells_list[v]])
             cell_x = np.squeeze(cell_pts[:,0]).tolist()
             cell_y = np.squeeze(cell_pts[:,1]).tolist()
             # path planner
             sweeper = Sweep(use_theta=False, theta=world.theta)
-            px, py = sweeper.planning(cell_x, cell_y, 0.25)
+            px, py = sweeper.planning(cell_x, cell_y, 0.05)
             inside_cell = np.array([px, py]).T
             # go to center
             if inside_cell.shape[0] == 0:
                 cexit = centroid(v)
             else:
-                cexit = np.linspace(inside_cell[-1], centroid(v), 50)
+                cexit = np.linspace(inside_cell[-1], centroid(v), 12)
             path = np.concatenate((centry, inside_cell, cexit), axis=0)
-        # we've already been there, don't scan
         else:
             # if we're just passing through, pass through center
-            path = np.concatenate((cellbord, centroid(v)), axis=0)
-
+            path = centry = np.linspace(cellbord, centroid(v), 12)
         cell_visited.append(v)
         # store data
         cell_path_data.append({
@@ -105,25 +104,30 @@ ax1 = bcd.draw_graph(
     world.G,
     world.points,
     node_marker='.',
-    node_text=True, 
+    node_text=False, 
+    chart_name='World',
     cell_text=True)
+
+cc = np.squeeze(np.array([c for c in world.cell_centroids.values()]))
+
 ax2 = bcd.draw_graph(
     ax2,
     world.Rg,
-    np.array([world.Rg.nodes[n]['center'] for n in world.Rg.nodes])
+    np.array(cc)
 )
+
+
 ax2 = bcd.draw_graph(
     ax2, 
     world.G, 
     world.points,
     node_color='lightgrey',
-    edge_colors=('silver','silver','silver','silver')
+    edge_colors=('silver','silver','silver','silver'),
+    chart_name='Reeb Graph'
     )
 
 
 path = get_path(world)
-'''
 path_animator = PathAnimator()
-path_animator.animate(path, world, fig, ax1, ax2, save=False, savepath='./planner_v1.mp4')
-'''
+path_animator.animate(path, world, fig, ax1, ax2, save=True, savepath='./planner_v1.mp4')
 plt.show()

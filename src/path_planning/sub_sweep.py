@@ -264,7 +264,7 @@ class PathAnimator(object):
             path, 
             linestyle='-', 
             color='red',
-            linewidth=1,
+            linewidth=0.5,
             capstyle='round',
             joinstyle='round',
             animated=True,

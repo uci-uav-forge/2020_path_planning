@@ -43,8 +43,10 @@ class World(object):
         self.cells, self.cells_list = self._line_sweep(theta)
         # dict of cell points by cell idx
         self.cell_points = {}
+        self.cell_centroids = {}
         for i, cell in enumerate(self.cells):
             self.cell_points[i] = np.array(self.points[list(cell)])
+            self.cell_centroids[i] = np.array(centroid(self.points, list(cell)))
         # reebgraph object
         self.Rg = self._build_reebgraph()
         # sweep line direction
@@ -402,26 +404,28 @@ class World(object):
     def _build_reebgraph(self):
         edges, node_data = [], {}
         for i, A in enumerate(self.cells_list):
+            P = self.G.subgraph(A)
             for j, B in enumerate(self.cells_list):
-                G = self.G
-                P, Q = G.subgraph(A), G.subgraph(B)
-                for e1, e2 in zip(P.edges, Q.edges):
-                    if i != j and set(e1) == set(e2):
-                        e = (i,j, e1)
-                        node_data[i] = {
-                            'cell' : A,
-                            'name' : self._int_to_alph(i+1)
+                Q = self.G.subgraph(B)
+                for e1 in P.edges:
+                    for e2 in Q.edges:
+                        if set(e1) == set(e2):
+                            e = (i, j, e1)
+                            f = (j, i, e2)
+                            node_data[i] = {
+                                'cell' : A,
+                                'name' : self._int_to_alph(i+1),
+                                'center' : np.array(centroid(self.points, index=A).T)
                             }
-                        node_data[j] = {
-                            'cell' : B,
-                            'name' : self._int_to_alph(j+1)
+                            node_data[j] = {
+                                'cell' : B,
+                                'name' : self._int_to_alph(j+1),
+                                'center' : np.array(centroid(self.points, index=B).T)
                             }
-                        edges.append(e)
+                            edges.extend([e, f])
         Rg = nx.Graph()
         Rg.add_weighted_edges_from(edges, weight='common')
         nx.set_node_attributes(Rg, node_data)
-        for n in Rg.nodes:
-            Rg.nodes[n]['center'] = np.array(centroid(self.points, index=Rg.nodes[n]['cell']).T)
         return Rg
     
     def _cell_centroid(self, cell):
@@ -473,7 +477,7 @@ def draw_graph(ax, G, points, **kwargs):
     node_color = kwargs.pop('node_color', 'k')
     node_marker = kwargs.pop('node_marker', '.')
     node_text = kwargs.pop('node_text', False)
-    node_text_size = kwargs.pop('cell_text', 8)
+    node_text_size = kwargs.pop('node_text_size', 8)
     cell_text = kwargs.pop('cell_text', False)
     cell_text_size = kwargs.pop('cell_text_size', 16)
     cells = kwargs.pop('cells', None)
@@ -483,17 +487,21 @@ def draw_graph(ax, G, points, **kwargs):
         raise(ValueError('You passed an arg that requires cells to also be passed.'))
     offset = lambda ax, x, y: offset_copy(ax.transData, x=x, y=y, units='dots')
     p_xy = np.squeeze(np.array([points[n] for n in G.nodes]))
-    node_collection = ax.scatter(p_xy[:, 0], p_xy[:, 1], c=node_color, marker=node_marker, zorder=2)
+    ax.scatter(p_xy[:, 0], p_xy[:, 1], c=node_color, marker=node_marker, zorder=2)
     ax.tick_params(axis="both", which="both", bottom=False, left=False, labelbottom=False, labelleft=False)
     # Node Text
     
     if node_text:
         for n in G.nodes:
-            ax.text(points[n,0], points[n,1], str(n), fontsize=node_text_size, transform=offset(ax, 0, node_text_size), ha='center', va='center')
-    if cell_text:
+            ax.text(
+                points[n,0], points[n,1], 
+                str(n), fontsize=node_text_size, 
+                transform=offset(ax, 0, 5), 
+                ha='center', va='center', zorder=5)
+    if cells:
         for i, cell in enumerate(cells):
             centr = centroid(points, index=cell)
-            ax.text(centr[0], centr[1], str(i), fontsize=cell_text_size, transform=offset(ax, 0, cell_text_size), ha='center', va='center')
+            ax.text(centr[0], centr[1], str(i), fontsize=cell_text_size, transform=offset(ax, 0, 0), ha='center', va='center')
     
     edge_styles = kwargs.pop('edge_styles', ('-','-',':',':'))
     edge_colors = kwargs.pop('edge_colors', ('k', 'k', 'g', 'g'))
