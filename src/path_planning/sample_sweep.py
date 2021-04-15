@@ -10,8 +10,11 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import copy
 
-poly = ConvPolygon(points=(4, 14, 1, 1), jaggedness=2, holes=2)
-angles = np.linspace(0, np.pi, 180)
+SORT_CRITERIA = 'min_cell_width'
+
+
+poly = ConvPolygon(points=(1, 39, 1, 1), jaggedness=2, holes=1)
+angles = np.linspace(0, np.pi, 60)
 worlds = []
 print('building worlds...')
 for angle in angles:
@@ -19,11 +22,11 @@ for angle in angles:
     print(angle * 180/np.pi, end='\r', flush=True)
     w = World(poly=poly, theta=angle)
     worlds.append( w )
-    print(w.scalar_qualities['avg_cell_aspect'])
+    print(w.scalar_qualities[SORT_CRITERIA])
 print('done!')
 
 
-q_function = lambda x: x.scalar_qualities['min_cell_width']
+q_function = lambda x: x.scalar_qualities[SORT_CRITERIA]
 cwsorted = sorted([ w for w in worlds], key=q_function)
 
 # metric highest
@@ -31,9 +34,7 @@ best = cwsorted[-1]
 # metric lowest
 worst = cwsorted[0]
 world = best
-
-
-print('World with angle={} chosen.'.format(world.theta))
+print('World with angle={} and {} {} chosen.'.format(world.theta, world.scalar_qualities[SORT_CRITERIA], SORT_CRITERIA))
 allpx, allpy = [], []
 
 allcell = []
@@ -66,8 +67,8 @@ def get_path(world):
             cell_x = np.squeeze(cell_pts[:,0]).tolist()
             cell_y = np.squeeze(cell_pts[:,1]).tolist()
             # path planner
-            sweeper = Sweep(use_theta=False, theta=world.theta)
-            px, py = sweeper.planning(cell_x, cell_y, 0.05)
+            sweeper = Sweep(use_theta=False, theta=-world.theta)
+            px, py = sweeper.planning(cell_x, cell_y, 0.09)
             inside_cell = np.array([px, py]).T
             # go to center
             if inside_cell.shape[0] == 0:
@@ -93,7 +94,7 @@ def get_path(world):
 
     return entire
 
-fig = plt.figure('Path Planner', figsize=(16, 9), facecolor='lightgrey')
+fig = plt.figure('Path Planner', figsize=(24, 13.5), facecolor='lightgrey')
 ax1 = fig.add_subplot(121)
 ax2 = fig.add_subplot(122)
 ax1.set_aspect('equal')
@@ -129,5 +130,5 @@ ax2 = bcd.draw_graph(
 
 path = get_path(world)
 path_animator = PathAnimator()
-path_animator.animate(path, world, fig, ax1, ax2, save=True, savepath='./planner_v1.mp4')
+path_animator.animate(path, world, fig, ax1, ax2, save=True, savepath='./planner_alpha.mp4')
 plt.show()

@@ -116,7 +116,9 @@ class Sweep(object):
         self.theta = theta
 
     def find_sweep_direction_and_start_position(self, ox, oy):
-        # find sweep_direction
+        # sweep direction and position. 
+        # position is the xy pair of the terminal node on cell border
+        # direction is the dx/dy of the last (largest) cell direction
         max_dist = 0.0
         vec = [0.0, 0.0]
         sweep_start_pos = [0.0, 0.0]
@@ -305,9 +307,10 @@ class PathAnimator(object):
         if save:
             # for some reason, calling plt.show() makes saving the animation possible... I don't get it but whatever
             plt.show()
-            ani = matplotlib.animation.FuncAnimation(fig, drawframe, frames=frames, init_func=initframe, interval=30, blit=False)
+            plt.close()
+            ani = matplotlib.animation.FuncAnimation(fig, drawframe, frames=frames, init_func=initframe, interval=1, blit=True)
         else:
-            ani = matplotlib.animation.FuncAnimation(fig, drawframe, frames=frames, init_func=initframe, interval=5, blit=True)
+            ani = matplotlib.animation.FuncAnimation(fig, drawframe, frames=frames, init_func=initframe, interval=1, blit=True)
             
         if save:
             if 'savepath' not in kwargs:
