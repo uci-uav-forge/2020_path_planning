@@ -1,0 +1,1396 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.9.2" />
+<title>path_planning.gen_polygon API documentation</title>
+<meta name="description" content="Polygon Generation Module …" />
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/sanitize.min.css" integrity="sha256-PK9q560IAAa6WVRRh76LtCaI8pjTJ2z11v0miyNNjrs=" crossorigin>
+<link rel="preload stylesheet" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/11.0.1/typography.min.css" integrity="sha256-7l/o7C8jubJiy74VsKTidCy1yBkRtiUGbVkYBylBqUg=" crossorigin>
+<link rel="stylesheet preload" as="style" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/styles/github.min.css" crossorigin>
+<style>:root{--highlight-color:#fe9}.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}h1:target,h2:target,h3:target,h4:target,h5:target,h6:target{background:var(--highlight-color);padding:.2em 0}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}dt:target .name{background:var(--highlight-color)}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}td{padding:0 .5em}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.1.1/highlight.min.js" integrity="sha256-Uv3H6lx7dJmRfRvH8TH6kJD1TSK1aFcwgx+mdg3epi8=" crossorigin></script>
+<script>window.addEventListener('DOMContentLoaded', () => hljs.initHighlighting())</script>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>path_planning.gen_polygon</code></h1>
+</header>
+<section id="section-intro">
+<p>Polygon Generation Module</p>
+<p>This module generates random "interesting" (non-convex) polygons. It
+works by building a cluster of [x,y] point pairs, calculating a Delaunay
+Triangulation of the cluster, and randomly removing traingles from the
+edge of the cluster. Degenerate polygons are avoided:</p>
+<pre><code>- Polygons with only a single point touching two parts of the poly
+- Polygons which are actually split into multiple polygons
+- Polygons whose edges cross over one another
+</code></pre>
+<p>The choice of clustering algorithm influences how polygons are formed,
+because they influence initial Delaunay Triangulation.</p>
+<p>Polygons contain:</p>
+<pre><code>- a "master" list of points which includes interior points
+- a networkX graph of points organized by index
+- a list of list of boundaries (lines) for each edge 
+- a list of list of points which are outer bounds and holes
+</code></pre>
+<p>Written by Mike Sutherland</p>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">&#39;&#39;&#39;
+Polygon Generation Module
+
+This module generates random &#34;interesting&#34; (non-convex) polygons. It
+works by building a cluster of [x,y] point pairs, calculating a Delaunay
+Triangulation of the cluster, and randomly removing traingles from the
+edge of the cluster. Degenerate polygons are avoided:
+
+    - Polygons with only a single point touching two parts of the poly
+    - Polygons which are actually split into multiple polygons
+    - Polygons whose edges cross over one another
+
+The choice of clustering algorithm influences how polygons are formed,
+because they influence initial Delaunay Triangulation.
+
+Polygons contain:
+
+    - a &#34;master&#34; list of points which includes interior points
+    - a networkX graph of points organized by index
+    - a list of list of boundaries (lines) for each edge 
+    - a list of list of points which are outer bounds and holes
+
+Written by Mike Sutherland
+&#39;&#39;&#39;
+import numpy as np
+import networkx as nx
+from datetime import datetime
+from scipy import spatial
+from collections import OrderedDict
+import matplotlib.pyplot as plt
+from matplotlib.transforms import offset_copy
+
+class ConvPolygon(object):
+    def __init__(self, points=(2, 40, 10, 40), jaggedness=2, holes=0):
+        self.points = self.gen_cluster_points(*points)
+        self.gen_poly(jaggedness=jaggedness, holes=holes)
+        self.blist = self.make_boundaries()
+        self.G = self.shape_graph()
+        
+    def gen_cluster_points(self, no_clusters, cluster_n, cluster_size, cluster_dist):
+        &#39;&#39;&#39;Generate clusters of normally distributed points
+
+        This generates multiple clusters of points, at a 
+
+        Parameters
+        ----------
+        no_clusters : [type]
+            [description]
+        cluster_n : [type]
+            [description]
+        cluster_size : [type]
+            [description]
+        cluster_dist : [type]
+            [description]
+
+        Returns
+        -------
+        Mx2 np.array
+            list of M xy points --&gt; M x 2
+        &#39;&#39;&#39;
+        pts = np.zeros((no_clusters * cluster_n, 2))
+        loc = np.array([0,0], dtype=&#39;float64&#39;)
+        for c in range(no_clusters):
+            pts[c * cluster_n:(c+1)* cluster_n, :] = np.random.normal(loc=loc, scale=cluster_size, size=(cluster_n, 2))
+            loc += np.random.uniform(low=-cluster_dist, high=cluster_dist, size=np.shape(loc))
+        return pts
+
+    def shape_graph(self):
+        &#39;&#39;&#39;make the graphs that define the polygon
+        &#39;&#39;&#39;
+        graphs = []
+        for boundary, outer in self.blist:
+            G = nx.DiGraph()
+            elist, nlist = [], []
+            
+            # check if we flip 
+            cw = 0.0
+            for k, v in boundary.items():
+                x1, y1 = tuple(self.points[k])
+                x2, y2 = tuple(self.points[v[0]])
+                cw += (x2 - x1) * (y2 + y1)
+            if cw &gt;= 0 and outer:
+                flip = False
+                weight = int(1)
+            elif cw &gt;= 0 and not outer:
+                weight = int(2)
+                flip = True
+            elif cw &lt; 0 and outer:
+                weight = int(1)
+                flip = True
+            else:
+                weight = int(2)
+                flip = False
+            # build the boundary
+            for k, v in boundary.items():
+                nlist.append(k)
+                if flip:
+                    elist.append( (v[0], k, weight) )
+                else:
+                    elist.append( (k, v[0], weight) )
+
+            G.add_nodes_from(nlist)
+            G.add_weighted_edges_from(elist)
+            graphs.append(G)
+        G = nx.compose_all(graphs)
+        return G
+            
+    def count_tris(self):
+        &#39;&#39;&#39;Count the triangles in the delaunay triangulation
+
+        Returns
+        -------
+        Tuple of int
+            (0 edge, single edge, double edge)
+        &#39;&#39;&#39;
+        edge0 = 0
+        edge1 = 1
+        edge2 = 2
+        for s in self.dt.neighbors:
+            c = (s == -1).sum()
+            if c == 0:
+                edge0 += 1
+            elif c == 1:
+                edge1 += 1
+            elif c == 2:
+                edge2 += 1
+        return (edge0, edge1, edge2)
+    
+    def count_outer_edges(self):
+        e0, e1, e2 = self.count_tris()
+        return e1 + 2*e2
+
+    def id_bps(self):
+        &#39;&#39;&#39;Identify points within 2 of a boundary.
+
+        Returns
+        -------
+        tuple of set
+            (safe (interior) points, unsafe (exterior) points)
+        &#39;&#39;&#39;
+        unsafe = set()
+        for neigh, tri in zip(self.dt.neighbors, self.dt.simplices):
+            if -1 in neigh:
+                # all points in this tri
+                unsafe.update(set([x for x in tri]))
+                for neigh2 in [x for x in neigh if x != -1]:
+                    # all points in neighboring tris also
+                    unsafe.update(set(self.dt.simplices[neigh2].flatten()))
+        return set(list(range(len(self.dt.points)))) - unsafe, unsafe
+    
+    def id_tris(self):
+        unsafe = set()
+        for i, neigh in enumerate(self.dt.neighbors):
+            if (neigh == -1).sum() &gt; 0:
+                unsafe.add(i)
+        return set(list(range(len(self.dt.simplices)))) - unsafe, unsafe
+
+    def id_tris2(self):
+        &#39;&#39;&#39;Identify tris that have points within a single point of an edge.
+
+        Returns
+        -------
+        tuple of set
+            (&#39;safe&#39; tris, &#39;unsafe&#39; tris)
+            Unsafe are within a single point, safe are not within a single point of an edge.
+        &#39;&#39;&#39;
+        unsafe_tris, safe_tris = set(), set()
+        safe_pts, unsafe_pts = self.id_bps()
+        for i, tri in enumerate(self.dt.simplices):
+            if set(tri).issubset(safe_pts):
+                safe_tris.add(i)
+            else:
+                unsafe_tris.add(i)
+        return safe_tris, unsafe_tris
+
+    def centroid(self, pts):
+        k = np.shape(pts)[0]
+        return np.array(np.sum(pts, axis=0)/k, dtype=&#39;float64&#39;)
+
+    def plot_tri(self, ax):
+        &#39;&#39;&#39;Plot self.dt on mpl axes `ax`
+
+        Parameters
+        ----------
+        ax : matplotlib `ax` object
+            The axis on which to plot
+        &#39;&#39;&#39;
+        centers = np.sum(self.dt.points[self.dt.simplices], axis=1, dtype=&#39;int&#39;)/3.0
+        centr = self.centroid(centers)
+        colors = np.array([ (x - centr[0])**2 + (y - centr[1])**2 for x, y in centers])
+        ax.tripcolor(self.dt.points[:,0], self.dt.points[:,1], self.dt.simplices, facecolors=colors, cmap=&#39;YlGn&#39;, edgecolors=&#39;darkgrey&#39;)
+        ax.set_aspect(&#39;equal&#39;)
+        ax.set_facecolor(&#39;lightblue&#39;)
+
+    def chart(self, ax, G, cm=plt.cm.tab10):
+        &#39;&#39;&#39;
+        Plot the graph `G` on `ax`
+        &#39;&#39;&#39;
+        pos = {}
+        for n in self.G.nodes:
+            pos[n] = self.points[n]
+        edges, weights = zip(*nx.get_edge_attributes(G, &#39;weight&#39;).items())
+        nx.draw(G, pos, node_size=16, ax=ax, edgelist=edges, edge_color=weights, edge_cmap=cm)
+        ax.set_aspect(&#39;equal&#39;)
+        def offset(ax, x, y):
+            return offset_copy(ax.transData, x=x, y=y, units=&#39;dots&#39;)
+        for n in G.nodes:
+            x, y = self.points[n][0], self.points[n][1]
+            ax.text(x, y, str(n), fontsize=9, transform=offset(ax, 0, 5))
+
+    def aspect(self, tri):
+        &#39;&#39;&#39;Given idx to a tri, find its aspect ratio
+
+        Parameters
+        ----------
+        tri : int
+            idx of tri
+
+        Returns
+        -------
+        float 
+            aspect ratio
+        &#39;&#39;&#39;
+        pts = self.dt.points[self.dt.simplices[tri]]
+        v1 = pts[0,:] - pts[2,:]
+        v2 = pts[1,:] - pts[0,:]
+        v3 = pts[2,:] - pts[1,:]
+        a = np.sqrt(v1.dot(v1.T))
+        b = np.sqrt(v2.dot(v2.T))
+        c = np.sqrt(v3.dot(v3.T))
+        return a * b * c / ( (b + c - a) * (c + a - b) * (a + b - c) )
+
+    def order_boundaries(self):
+        &#39;&#39;&#39;
+        Order the boundaries by their topological structure
+        &#39;&#39;&#39;
+        is_outer = np.asarray(self.dt.neighbors == -1, dtype=&#39;bool&#39;)
+        tris = [list(x.compressed()) for x in np.ma.MaskedArray(self.dt.simplices, is_outer)]
+        graph = {}
+        # create a graph of nodes, which are indices to points:
+        # child nodes are the neighbors of parent nodes
+        for i, n in enumerate(tris):
+            for j, m in enumerate(tris):
+                if len(n) &lt; 3 and len(m) &lt; 3 and i != j:                    
+                    if set(n) &amp; set(m) != set():
+                        key = list(set(n) &amp; set(m))[0]
+                        val = tuple(set(n) ^ set(m))
+                        graph[key] = val
+
+        ordered_objs = []
+        b = set(graph.keys())
+        minpt = min(b, key=lambda i: self.dt.points[i, 0])
+        while(len(b) != 0):
+            t = set()
+            # depth first traversal
+            def dfs(g, s, p=[]):
+                if s not in p:
+                    p.append(s)
+                    if s not in g:
+                        return p
+                    for n in g[s]:
+                        p = dfs(g, n, p)
+                return p
+            # traverse and return as array
+            t = dfs(graph, list(b)[0])
+            # t.append(t[0])
+            st = set(t)
+            outer_bound = False
+            if minpt in st: 
+                outer_bound = True
+            ordered_objs.append((t, outer_bound))
+            b = b - st
+        return ordered_objs
+
+    def make_boundaries(self):
+        &#39;&#39;&#39;=create boundary dict structure
+        keys are boundary point idx
+        values are tuple (prev idx, next idx, bool outer)
+        &#39;&#39;&#39;
+        boundaries = []
+        # find point with min x val
+        min_p = np.argmax(self.dt.points, axis=0)
+        for boundary, is_outer in self.order_boundaries():
+            # iterate through each boundary and create dict:
+            # key = point
+            # values = (prev point, next point, outer True/False)
+            bdict = OrderedDict()
+            for i, pt in enumerate(boundary):
+                if i != 0 and i != len(boundary) - 1:
+                    bdict[pt] = (boundary[i - 1], boundary[i + 1])
+                elif i == 0:
+                    bdict[pt] = (boundary[-1], boundary[i + 1])
+                elif i == len(boundary) - 1:
+                    bdict[pt] = (boundary[i - 1], boundary[0])
+            boundaries.append((bdict, is_outer))
+        return boundaries
+
+    def update_plot(self, ax):
+        ax.clear()
+        self.plot_tri(ax)
+        plt.pause(.1)
+
+    def check_edgesafety(self, rm_candidate, edge_tris):
+        critpts = self.dt.simplices[rm_candidate, (self.dt.neighbors[rm_candidate,:] == -1)]
+        unsafe = self.id_tris()[1]
+        check = True
+        # check all unsafe triangles for that critical point
+        for utri in unsafe:
+            for pt in critpts:
+                if utri != rm_candidate and pt in self.dt.simplices[utri]:
+                    check = False
+        return check
+
+    def gen_poly(self, jaggedness, holes=0):
+        &#39;&#39;&#39;
+        Generate the polgyon. This algorithm is _very_ slow, it probably has n^3
+        time complexity or something like that. It works up to polygons of about 3
+        or 400 points or less.
+        &#39;&#39;&#39;
+        tic = datetime.now()
+        self.dt = spatial.Delaunay(self.points)
+        n_edges = self.count_outer_edges()
+        # holes
+        for h in range(holes):
+            safe, unsafe = self.id_tris2()
+            if not safe:
+                break
+            rm = np.random.choice(list(safe), replace=False)
+            self.del_tri(rm)
+        # jaggedness
+        edges_desired = int(n_edges * (jaggedness + 1))
+        while n_edges &lt; edges_desired:
+            rm = None
+            # get 1-edge tris by aspect ratio
+            etris = sorted(list(self.id_tris()[1]), key=lambda tri: self.aspect(tri))
+            for etri in etris:
+                if self.check_edgesafety(etri, etris) == True:
+                    rm = etri
+                    break
+            if rm is not None:
+                self.del_tri(rm)
+            else:
+                print(&#39;None viable to remove.&#39;)
+                break
+            n_edges = self.count_outer_edges()
+
+        toc = datetime.now()
+        print(&#39;Generated a polygon with {} points and {} edges in {}&#39;.format(self.dt.points.shape[0], n_edges, toc - tic))
+
+    def del_tri(self, rm):
+        &#39;&#39;&#39;Delete a tri
+
+        Parameters
+        ----------
+        rm : int
+            idx of the tri to delete
+        &#39;&#39;&#39;
+        # each neighbor in dt will have -1 where the neighboring simplex used to be.
+        for i, nb in enumerate(self.dt.neighbors):
+            for j, s in enumerate(nb):
+                if rm == s:
+                    self.dt.neighbors[i,j] = -1
+        # we have to decrement all references to simplexes above rm because we&#39;re going to remove that simplex
+        decrement_idx = np.zeros(np.shape(self.dt.neighbors), dtype=&#39;int32&#39;)
+        for i, nb in enumerate(self.dt.neighbors):
+            for j, s in enumerate(nb):
+                if self.dt.neighbors[i,j] &gt; rm:
+                    decrement_idx[i,j] = -1
+        self.dt.neighbors += decrement_idx
+        # perform the deletion
+        self.dt.simplices = np.delete(self.dt.simplices, rm, axis=0)
+        self.dt.neighbors = np.delete(self.dt.neighbors, rm, axis=0)
+
+if __name__ == &#39;__main__&#39;:
+    poly = ConvPolygon()</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="path_planning.gen_polygon.ConvPolygon"><code class="flex name class">
+<span>class <span class="ident">ConvPolygon</span></span>
+<span>(</span><span>points=(2, 40, 10, 40), jaggedness=2, holes=0)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class ConvPolygon(object):
+    def __init__(self, points=(2, 40, 10, 40), jaggedness=2, holes=0):
+        self.points = self.gen_cluster_points(*points)
+        self.gen_poly(jaggedness=jaggedness, holes=holes)
+        self.blist = self.make_boundaries()
+        self.G = self.shape_graph()
+        
+    def gen_cluster_points(self, no_clusters, cluster_n, cluster_size, cluster_dist):
+        &#39;&#39;&#39;Generate clusters of normally distributed points
+
+        This generates multiple clusters of points, at a 
+
+        Parameters
+        ----------
+        no_clusters : [type]
+            [description]
+        cluster_n : [type]
+            [description]
+        cluster_size : [type]
+            [description]
+        cluster_dist : [type]
+            [description]
+
+        Returns
+        -------
+        Mx2 np.array
+            list of M xy points --&gt; M x 2
+        &#39;&#39;&#39;
+        pts = np.zeros((no_clusters * cluster_n, 2))
+        loc = np.array([0,0], dtype=&#39;float64&#39;)
+        for c in range(no_clusters):
+            pts[c * cluster_n:(c+1)* cluster_n, :] = np.random.normal(loc=loc, scale=cluster_size, size=(cluster_n, 2))
+            loc += np.random.uniform(low=-cluster_dist, high=cluster_dist, size=np.shape(loc))
+        return pts
+
+    def shape_graph(self):
+        &#39;&#39;&#39;make the graphs that define the polygon
+        &#39;&#39;&#39;
+        graphs = []
+        for boundary, outer in self.blist:
+            G = nx.DiGraph()
+            elist, nlist = [], []
+            
+            # check if we flip 
+            cw = 0.0
+            for k, v in boundary.items():
+                x1, y1 = tuple(self.points[k])
+                x2, y2 = tuple(self.points[v[0]])
+                cw += (x2 - x1) * (y2 + y1)
+            if cw &gt;= 0 and outer:
+                flip = False
+                weight = int(1)
+            elif cw &gt;= 0 and not outer:
+                weight = int(2)
+                flip = True
+            elif cw &lt; 0 and outer:
+                weight = int(1)
+                flip = True
+            else:
+                weight = int(2)
+                flip = False
+            # build the boundary
+            for k, v in boundary.items():
+                nlist.append(k)
+                if flip:
+                    elist.append( (v[0], k, weight) )
+                else:
+                    elist.append( (k, v[0], weight) )
+
+            G.add_nodes_from(nlist)
+            G.add_weighted_edges_from(elist)
+            graphs.append(G)
+        G = nx.compose_all(graphs)
+        return G
+            
+    def count_tris(self):
+        &#39;&#39;&#39;Count the triangles in the delaunay triangulation
+
+        Returns
+        -------
+        Tuple of int
+            (0 edge, single edge, double edge)
+        &#39;&#39;&#39;
+        edge0 = 0
+        edge1 = 1
+        edge2 = 2
+        for s in self.dt.neighbors:
+            c = (s == -1).sum()
+            if c == 0:
+                edge0 += 1
+            elif c == 1:
+                edge1 += 1
+            elif c == 2:
+                edge2 += 1
+        return (edge0, edge1, edge2)
+    
+    def count_outer_edges(self):
+        e0, e1, e2 = self.count_tris()
+        return e1 + 2*e2
+
+    def id_bps(self):
+        &#39;&#39;&#39;Identify points within 2 of a boundary.
+
+        Returns
+        -------
+        tuple of set
+            (safe (interior) points, unsafe (exterior) points)
+        &#39;&#39;&#39;
+        unsafe = set()
+        for neigh, tri in zip(self.dt.neighbors, self.dt.simplices):
+            if -1 in neigh:
+                # all points in this tri
+                unsafe.update(set([x for x in tri]))
+                for neigh2 in [x for x in neigh if x != -1]:
+                    # all points in neighboring tris also
+                    unsafe.update(set(self.dt.simplices[neigh2].flatten()))
+        return set(list(range(len(self.dt.points)))) - unsafe, unsafe
+    
+    def id_tris(self):
+        unsafe = set()
+        for i, neigh in enumerate(self.dt.neighbors):
+            if (neigh == -1).sum() &gt; 0:
+                unsafe.add(i)
+        return set(list(range(len(self.dt.simplices)))) - unsafe, unsafe
+
+    def id_tris2(self):
+        &#39;&#39;&#39;Identify tris that have points within a single point of an edge.
+
+        Returns
+        -------
+        tuple of set
+            (&#39;safe&#39; tris, &#39;unsafe&#39; tris)
+            Unsafe are within a single point, safe are not within a single point of an edge.
+        &#39;&#39;&#39;
+        unsafe_tris, safe_tris = set(), set()
+        safe_pts, unsafe_pts = self.id_bps()
+        for i, tri in enumerate(self.dt.simplices):
+            if set(tri).issubset(safe_pts):
+                safe_tris.add(i)
+            else:
+                unsafe_tris.add(i)
+        return safe_tris, unsafe_tris
+
+    def centroid(self, pts):
+        k = np.shape(pts)[0]
+        return np.array(np.sum(pts, axis=0)/k, dtype=&#39;float64&#39;)
+
+    def plot_tri(self, ax):
+        &#39;&#39;&#39;Plot self.dt on mpl axes `ax`
+
+        Parameters
+        ----------
+        ax : matplotlib `ax` object
+            The axis on which to plot
+        &#39;&#39;&#39;
+        centers = np.sum(self.dt.points[self.dt.simplices], axis=1, dtype=&#39;int&#39;)/3.0
+        centr = self.centroid(centers)
+        colors = np.array([ (x - centr[0])**2 + (y - centr[1])**2 for x, y in centers])
+        ax.tripcolor(self.dt.points[:,0], self.dt.points[:,1], self.dt.simplices, facecolors=colors, cmap=&#39;YlGn&#39;, edgecolors=&#39;darkgrey&#39;)
+        ax.set_aspect(&#39;equal&#39;)
+        ax.set_facecolor(&#39;lightblue&#39;)
+
+    def chart(self, ax, G, cm=plt.cm.tab10):
+        &#39;&#39;&#39;
+        Plot the graph `G` on `ax`
+        &#39;&#39;&#39;
+        pos = {}
+        for n in self.G.nodes:
+            pos[n] = self.points[n]
+        edges, weights = zip(*nx.get_edge_attributes(G, &#39;weight&#39;).items())
+        nx.draw(G, pos, node_size=16, ax=ax, edgelist=edges, edge_color=weights, edge_cmap=cm)
+        ax.set_aspect(&#39;equal&#39;)
+        def offset(ax, x, y):
+            return offset_copy(ax.transData, x=x, y=y, units=&#39;dots&#39;)
+        for n in G.nodes:
+            x, y = self.points[n][0], self.points[n][1]
+            ax.text(x, y, str(n), fontsize=9, transform=offset(ax, 0, 5))
+
+    def aspect(self, tri):
+        &#39;&#39;&#39;Given idx to a tri, find its aspect ratio
+
+        Parameters
+        ----------
+        tri : int
+            idx of tri
+
+        Returns
+        -------
+        float 
+            aspect ratio
+        &#39;&#39;&#39;
+        pts = self.dt.points[self.dt.simplices[tri]]
+        v1 = pts[0,:] - pts[2,:]
+        v2 = pts[1,:] - pts[0,:]
+        v3 = pts[2,:] - pts[1,:]
+        a = np.sqrt(v1.dot(v1.T))
+        b = np.sqrt(v2.dot(v2.T))
+        c = np.sqrt(v3.dot(v3.T))
+        return a * b * c / ( (b + c - a) * (c + a - b) * (a + b - c) )
+
+    def order_boundaries(self):
+        &#39;&#39;&#39;
+        Order the boundaries by their topological structure
+        &#39;&#39;&#39;
+        is_outer = np.asarray(self.dt.neighbors == -1, dtype=&#39;bool&#39;)
+        tris = [list(x.compressed()) for x in np.ma.MaskedArray(self.dt.simplices, is_outer)]
+        graph = {}
+        # create a graph of nodes, which are indices to points:
+        # child nodes are the neighbors of parent nodes
+        for i, n in enumerate(tris):
+            for j, m in enumerate(tris):
+                if len(n) &lt; 3 and len(m) &lt; 3 and i != j:                    
+                    if set(n) &amp; set(m) != set():
+                        key = list(set(n) &amp; set(m))[0]
+                        val = tuple(set(n) ^ set(m))
+                        graph[key] = val
+
+        ordered_objs = []
+        b = set(graph.keys())
+        minpt = min(b, key=lambda i: self.dt.points[i, 0])
+        while(len(b) != 0):
+            t = set()
+            # depth first traversal
+            def dfs(g, s, p=[]):
+                if s not in p:
+                    p.append(s)
+                    if s not in g:
+                        return p
+                    for n in g[s]:
+                        p = dfs(g, n, p)
+                return p
+            # traverse and return as array
+            t = dfs(graph, list(b)[0])
+            # t.append(t[0])
+            st = set(t)
+            outer_bound = False
+            if minpt in st: 
+                outer_bound = True
+            ordered_objs.append((t, outer_bound))
+            b = b - st
+        return ordered_objs
+
+    def make_boundaries(self):
+        &#39;&#39;&#39;=create boundary dict structure
+        keys are boundary point idx
+        values are tuple (prev idx, next idx, bool outer)
+        &#39;&#39;&#39;
+        boundaries = []
+        # find point with min x val
+        min_p = np.argmax(self.dt.points, axis=0)
+        for boundary, is_outer in self.order_boundaries():
+            # iterate through each boundary and create dict:
+            # key = point
+            # values = (prev point, next point, outer True/False)
+            bdict = OrderedDict()
+            for i, pt in enumerate(boundary):
+                if i != 0 and i != len(boundary) - 1:
+                    bdict[pt] = (boundary[i - 1], boundary[i + 1])
+                elif i == 0:
+                    bdict[pt] = (boundary[-1], boundary[i + 1])
+                elif i == len(boundary) - 1:
+                    bdict[pt] = (boundary[i - 1], boundary[0])
+            boundaries.append((bdict, is_outer))
+        return boundaries
+
+    def update_plot(self, ax):
+        ax.clear()
+        self.plot_tri(ax)
+        plt.pause(.1)
+
+    def check_edgesafety(self, rm_candidate, edge_tris):
+        critpts = self.dt.simplices[rm_candidate, (self.dt.neighbors[rm_candidate,:] == -1)]
+        unsafe = self.id_tris()[1]
+        check = True
+        # check all unsafe triangles for that critical point
+        for utri in unsafe:
+            for pt in critpts:
+                if utri != rm_candidate and pt in self.dt.simplices[utri]:
+                    check = False
+        return check
+
+    def gen_poly(self, jaggedness, holes=0):
+        &#39;&#39;&#39;
+        Generate the polgyon. This algorithm is _very_ slow, it probably has n^3
+        time complexity or something like that. It works up to polygons of about 3
+        or 400 points or less.
+        &#39;&#39;&#39;
+        tic = datetime.now()
+        self.dt = spatial.Delaunay(self.points)
+        n_edges = self.count_outer_edges()
+        # holes
+        for h in range(holes):
+            safe, unsafe = self.id_tris2()
+            if not safe:
+                break
+            rm = np.random.choice(list(safe), replace=False)
+            self.del_tri(rm)
+        # jaggedness
+        edges_desired = int(n_edges * (jaggedness + 1))
+        while n_edges &lt; edges_desired:
+            rm = None
+            # get 1-edge tris by aspect ratio
+            etris = sorted(list(self.id_tris()[1]), key=lambda tri: self.aspect(tri))
+            for etri in etris:
+                if self.check_edgesafety(etri, etris) == True:
+                    rm = etri
+                    break
+            if rm is not None:
+                self.del_tri(rm)
+            else:
+                print(&#39;None viable to remove.&#39;)
+                break
+            n_edges = self.count_outer_edges()
+
+        toc = datetime.now()
+        print(&#39;Generated a polygon with {} points and {} edges in {}&#39;.format(self.dt.points.shape[0], n_edges, toc - tic))
+
+    def del_tri(self, rm):
+        &#39;&#39;&#39;Delete a tri
+
+        Parameters
+        ----------
+        rm : int
+            idx of the tri to delete
+        &#39;&#39;&#39;
+        # each neighbor in dt will have -1 where the neighboring simplex used to be.
+        for i, nb in enumerate(self.dt.neighbors):
+            for j, s in enumerate(nb):
+                if rm == s:
+                    self.dt.neighbors[i,j] = -1
+        # we have to decrement all references to simplexes above rm because we&#39;re going to remove that simplex
+        decrement_idx = np.zeros(np.shape(self.dt.neighbors), dtype=&#39;int32&#39;)
+        for i, nb in enumerate(self.dt.neighbors):
+            for j, s in enumerate(nb):
+                if self.dt.neighbors[i,j] &gt; rm:
+                    decrement_idx[i,j] = -1
+        self.dt.neighbors += decrement_idx
+        # perform the deletion
+        self.dt.simplices = np.delete(self.dt.simplices, rm, axis=0)
+        self.dt.neighbors = np.delete(self.dt.neighbors, rm, axis=0)</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="path_planning.gen_polygon.ConvPolygon.aspect"><code class="name flex">
+<span>def <span class="ident">aspect</span></span>(<span>self, tri)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Given idx to a tri, find its aspect ratio</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>tri</code></strong> :&ensp;<code>int</code></dt>
+<dd>idx of tri</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>float </code></dt>
+<dd>aspect ratio</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def aspect(self, tri):
+    &#39;&#39;&#39;Given idx to a tri, find its aspect ratio
+
+    Parameters
+    ----------
+    tri : int
+        idx of tri
+
+    Returns
+    -------
+    float 
+        aspect ratio
+    &#39;&#39;&#39;
+    pts = self.dt.points[self.dt.simplices[tri]]
+    v1 = pts[0,:] - pts[2,:]
+    v2 = pts[1,:] - pts[0,:]
+    v3 = pts[2,:] - pts[1,:]
+    a = np.sqrt(v1.dot(v1.T))
+    b = np.sqrt(v2.dot(v2.T))
+    c = np.sqrt(v3.dot(v3.T))
+    return a * b * c / ( (b + c - a) * (c + a - b) * (a + b - c) )</code></pre>
+</details>
+</dd>
+<dt id="path_planning.gen_polygon.ConvPolygon.centroid"><code class="name flex">
+<span>def <span class="ident">centroid</span></span>(<span>self, pts)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def centroid(self, pts):
+    k = np.shape(pts)[0]
+    return np.array(np.sum(pts, axis=0)/k, dtype=&#39;float64&#39;)</code></pre>
+</details>
+</dd>
+<dt id="path_planning.gen_polygon.ConvPolygon.chart"><code class="name flex">
+<span>def <span class="ident">chart</span></span>(<span>self, ax, G, cm=&lt;matplotlib.colors.ListedColormap object&gt;)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Plot the graph <code>G</code> on <code>ax</code></p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def chart(self, ax, G, cm=plt.cm.tab10):
+    &#39;&#39;&#39;
+    Plot the graph `G` on `ax`
+    &#39;&#39;&#39;
+    pos = {}
+    for n in self.G.nodes:
+        pos[n] = self.points[n]
+    edges, weights = zip(*nx.get_edge_attributes(G, &#39;weight&#39;).items())
+    nx.draw(G, pos, node_size=16, ax=ax, edgelist=edges, edge_color=weights, edge_cmap=cm)
+    ax.set_aspect(&#39;equal&#39;)
+    def offset(ax, x, y):
+        return offset_copy(ax.transData, x=x, y=y, units=&#39;dots&#39;)
+    for n in G.nodes:
+        x, y = self.points[n][0], self.points[n][1]
+        ax.text(x, y, str(n), fontsize=9, transform=offset(ax, 0, 5))</code></pre>
+</details>
+</dd>
+<dt id="path_planning.gen_polygon.ConvPolygon.check_edgesafety"><code class="name flex">
+<span>def <span class="ident">check_edgesafety</span></span>(<span>self, rm_candidate, edge_tris)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def check_edgesafety(self, rm_candidate, edge_tris):
+    critpts = self.dt.simplices[rm_candidate, (self.dt.neighbors[rm_candidate,:] == -1)]
+    unsafe = self.id_tris()[1]
+    check = True
+    # check all unsafe triangles for that critical point
+    for utri in unsafe:
+        for pt in critpts:
+            if utri != rm_candidate and pt in self.dt.simplices[utri]:
+                check = False
+    return check</code></pre>
+</details>
+</dd>
+<dt id="path_planning.gen_polygon.ConvPolygon.count_outer_edges"><code class="name flex">
+<span>def <span class="ident">count_outer_edges</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def count_outer_edges(self):
+    e0, e1, e2 = self.count_tris()
+    return e1 + 2*e2</code></pre>
+</details>
+</dd>
+<dt id="path_planning.gen_polygon.ConvPolygon.count_tris"><code class="name flex">
+<span>def <span class="ident">count_tris</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Count the triangles in the delaunay triangulation</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Tuple</code> of <code>int</code></dt>
+<dd>(0 edge, single edge, double edge)</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def count_tris(self):
+    &#39;&#39;&#39;Count the triangles in the delaunay triangulation
+
+    Returns
+    -------
+    Tuple of int
+        (0 edge, single edge, double edge)
+    &#39;&#39;&#39;
+    edge0 = 0
+    edge1 = 1
+    edge2 = 2
+    for s in self.dt.neighbors:
+        c = (s == -1).sum()
+        if c == 0:
+            edge0 += 1
+        elif c == 1:
+            edge1 += 1
+        elif c == 2:
+            edge2 += 1
+    return (edge0, edge1, edge2)</code></pre>
+</details>
+</dd>
+<dt id="path_planning.gen_polygon.ConvPolygon.del_tri"><code class="name flex">
+<span>def <span class="ident">del_tri</span></span>(<span>self, rm)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Delete a tri</p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>rm</code></strong> :&ensp;<code>int</code></dt>
+<dd>idx of the tri to delete</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def del_tri(self, rm):
+    &#39;&#39;&#39;Delete a tri
+
+    Parameters
+    ----------
+    rm : int
+        idx of the tri to delete
+    &#39;&#39;&#39;
+    # each neighbor in dt will have -1 where the neighboring simplex used to be.
+    for i, nb in enumerate(self.dt.neighbors):
+        for j, s in enumerate(nb):
+            if rm == s:
+                self.dt.neighbors[i,j] = -1
+    # we have to decrement all references to simplexes above rm because we&#39;re going to remove that simplex
+    decrement_idx = np.zeros(np.shape(self.dt.neighbors), dtype=&#39;int32&#39;)
+    for i, nb in enumerate(self.dt.neighbors):
+        for j, s in enumerate(nb):
+            if self.dt.neighbors[i,j] &gt; rm:
+                decrement_idx[i,j] = -1
+    self.dt.neighbors += decrement_idx
+    # perform the deletion
+    self.dt.simplices = np.delete(self.dt.simplices, rm, axis=0)
+    self.dt.neighbors = np.delete(self.dt.neighbors, rm, axis=0)</code></pre>
+</details>
+</dd>
+<dt id="path_planning.gen_polygon.ConvPolygon.gen_cluster_points"><code class="name flex">
+<span>def <span class="ident">gen_cluster_points</span></span>(<span>self, no_clusters, cluster_n, cluster_size, cluster_dist)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Generate clusters of normally distributed points</p>
+<p>This generates multiple clusters of points, at a </p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>no_clusters</code></strong> :&ensp;<code>[type]</code></dt>
+<dd>[description]</dd>
+<dt><strong><code>cluster_n</code></strong> :&ensp;<code>[type]</code></dt>
+<dd>[description]</dd>
+<dt><strong><code>cluster_size</code></strong> :&ensp;<code>[type]</code></dt>
+<dd>[description]</dd>
+<dt><strong><code>cluster_dist</code></strong> :&ensp;<code>[type]</code></dt>
+<dd>[description]</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Mx2 np.array</code></dt>
+<dd>list of M xy points &ndash;&gt; M x 2</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def gen_cluster_points(self, no_clusters, cluster_n, cluster_size, cluster_dist):
+    &#39;&#39;&#39;Generate clusters of normally distributed points
+
+    This generates multiple clusters of points, at a 
+
+    Parameters
+    ----------
+    no_clusters : [type]
+        [description]
+    cluster_n : [type]
+        [description]
+    cluster_size : [type]
+        [description]
+    cluster_dist : [type]
+        [description]
+
+    Returns
+    -------
+    Mx2 np.array
+        list of M xy points --&gt; M x 2
+    &#39;&#39;&#39;
+    pts = np.zeros((no_clusters * cluster_n, 2))
+    loc = np.array([0,0], dtype=&#39;float64&#39;)
+    for c in range(no_clusters):
+        pts[c * cluster_n:(c+1)* cluster_n, :] = np.random.normal(loc=loc, scale=cluster_size, size=(cluster_n, 2))
+        loc += np.random.uniform(low=-cluster_dist, high=cluster_dist, size=np.shape(loc))
+    return pts</code></pre>
+</details>
+</dd>
+<dt id="path_planning.gen_polygon.ConvPolygon.gen_poly"><code class="name flex">
+<span>def <span class="ident">gen_poly</span></span>(<span>self, jaggedness, holes=0)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Generate the polgyon. This algorithm is <em>very</em> slow, it probably has n^3
+time complexity or something like that. It works up to polygons of about 3
+or 400 points or less.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def gen_poly(self, jaggedness, holes=0):
+    &#39;&#39;&#39;
+    Generate the polgyon. This algorithm is _very_ slow, it probably has n^3
+    time complexity or something like that. It works up to polygons of about 3
+    or 400 points or less.
+    &#39;&#39;&#39;
+    tic = datetime.now()
+    self.dt = spatial.Delaunay(self.points)
+    n_edges = self.count_outer_edges()
+    # holes
+    for h in range(holes):
+        safe, unsafe = self.id_tris2()
+        if not safe:
+            break
+        rm = np.random.choice(list(safe), replace=False)
+        self.del_tri(rm)
+    # jaggedness
+    edges_desired = int(n_edges * (jaggedness + 1))
+    while n_edges &lt; edges_desired:
+        rm = None
+        # get 1-edge tris by aspect ratio
+        etris = sorted(list(self.id_tris()[1]), key=lambda tri: self.aspect(tri))
+        for etri in etris:
+            if self.check_edgesafety(etri, etris) == True:
+                rm = etri
+                break
+        if rm is not None:
+            self.del_tri(rm)
+        else:
+            print(&#39;None viable to remove.&#39;)
+            break
+        n_edges = self.count_outer_edges()
+
+    toc = datetime.now()
+    print(&#39;Generated a polygon with {} points and {} edges in {}&#39;.format(self.dt.points.shape[0], n_edges, toc - tic))</code></pre>
+</details>
+</dd>
+<dt id="path_planning.gen_polygon.ConvPolygon.id_bps"><code class="name flex">
+<span>def <span class="ident">id_bps</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Identify points within 2 of a boundary.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code> of <code>set</code></dt>
+<dd>(safe (interior) points, unsafe (exterior) points)</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def id_bps(self):
+    &#39;&#39;&#39;Identify points within 2 of a boundary.
+
+    Returns
+    -------
+    tuple of set
+        (safe (interior) points, unsafe (exterior) points)
+    &#39;&#39;&#39;
+    unsafe = set()
+    for neigh, tri in zip(self.dt.neighbors, self.dt.simplices):
+        if -1 in neigh:
+            # all points in this tri
+            unsafe.update(set([x for x in tri]))
+            for neigh2 in [x for x in neigh if x != -1]:
+                # all points in neighboring tris also
+                unsafe.update(set(self.dt.simplices[neigh2].flatten()))
+    return set(list(range(len(self.dt.points)))) - unsafe, unsafe</code></pre>
+</details>
+</dd>
+<dt id="path_planning.gen_polygon.ConvPolygon.id_tris"><code class="name flex">
+<span>def <span class="ident">id_tris</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def id_tris(self):
+    unsafe = set()
+    for i, neigh in enumerate(self.dt.neighbors):
+        if (neigh == -1).sum() &gt; 0:
+            unsafe.add(i)
+    return set(list(range(len(self.dt.simplices)))) - unsafe, unsafe</code></pre>
+</details>
+</dd>
+<dt id="path_planning.gen_polygon.ConvPolygon.id_tris2"><code class="name flex">
+<span>def <span class="ident">id_tris2</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Identify tris that have points within a single point of an edge.</p>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>tuple</code> of <code>set</code></dt>
+<dd>('safe' tris, 'unsafe' tris)
+Unsafe are within a single point, safe are not within a single point of an edge.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def id_tris2(self):
+    &#39;&#39;&#39;Identify tris that have points within a single point of an edge.
+
+    Returns
+    -------
+    tuple of set
+        (&#39;safe&#39; tris, &#39;unsafe&#39; tris)
+        Unsafe are within a single point, safe are not within a single point of an edge.
+    &#39;&#39;&#39;
+    unsafe_tris, safe_tris = set(), set()
+    safe_pts, unsafe_pts = self.id_bps()
+    for i, tri in enumerate(self.dt.simplices):
+        if set(tri).issubset(safe_pts):
+            safe_tris.add(i)
+        else:
+            unsafe_tris.add(i)
+    return safe_tris, unsafe_tris</code></pre>
+</details>
+</dd>
+<dt id="path_planning.gen_polygon.ConvPolygon.make_boundaries"><code class="name flex">
+<span>def <span class="ident">make_boundaries</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>=create boundary dict structure
+keys are boundary point idx
+values are tuple (prev idx, next idx, bool outer)</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def make_boundaries(self):
+    &#39;&#39;&#39;=create boundary dict structure
+    keys are boundary point idx
+    values are tuple (prev idx, next idx, bool outer)
+    &#39;&#39;&#39;
+    boundaries = []
+    # find point with min x val
+    min_p = np.argmax(self.dt.points, axis=0)
+    for boundary, is_outer in self.order_boundaries():
+        # iterate through each boundary and create dict:
+        # key = point
+        # values = (prev point, next point, outer True/False)
+        bdict = OrderedDict()
+        for i, pt in enumerate(boundary):
+            if i != 0 and i != len(boundary) - 1:
+                bdict[pt] = (boundary[i - 1], boundary[i + 1])
+            elif i == 0:
+                bdict[pt] = (boundary[-1], boundary[i + 1])
+            elif i == len(boundary) - 1:
+                bdict[pt] = (boundary[i - 1], boundary[0])
+        boundaries.append((bdict, is_outer))
+    return boundaries</code></pre>
+</details>
+</dd>
+<dt id="path_planning.gen_polygon.ConvPolygon.order_boundaries"><code class="name flex">
+<span>def <span class="ident">order_boundaries</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Order the boundaries by their topological structure</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def order_boundaries(self):
+    &#39;&#39;&#39;
+    Order the boundaries by their topological structure
+    &#39;&#39;&#39;
+    is_outer = np.asarray(self.dt.neighbors == -1, dtype=&#39;bool&#39;)
+    tris = [list(x.compressed()) for x in np.ma.MaskedArray(self.dt.simplices, is_outer)]
+    graph = {}
+    # create a graph of nodes, which are indices to points:
+    # child nodes are the neighbors of parent nodes
+    for i, n in enumerate(tris):
+        for j, m in enumerate(tris):
+            if len(n) &lt; 3 and len(m) &lt; 3 and i != j:                    
+                if set(n) &amp; set(m) != set():
+                    key = list(set(n) &amp; set(m))[0]
+                    val = tuple(set(n) ^ set(m))
+                    graph[key] = val
+
+    ordered_objs = []
+    b = set(graph.keys())
+    minpt = min(b, key=lambda i: self.dt.points[i, 0])
+    while(len(b) != 0):
+        t = set()
+        # depth first traversal
+        def dfs(g, s, p=[]):
+            if s not in p:
+                p.append(s)
+                if s not in g:
+                    return p
+                for n in g[s]:
+                    p = dfs(g, n, p)
+            return p
+        # traverse and return as array
+        t = dfs(graph, list(b)[0])
+        # t.append(t[0])
+        st = set(t)
+        outer_bound = False
+        if minpt in st: 
+            outer_bound = True
+        ordered_objs.append((t, outer_bound))
+        b = b - st
+    return ordered_objs</code></pre>
+</details>
+</dd>
+<dt id="path_planning.gen_polygon.ConvPolygon.plot_tri"><code class="name flex">
+<span>def <span class="ident">plot_tri</span></span>(<span>self, ax)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Plot self.dt on mpl axes <code>ax</code></p>
+<h2 id="parameters">Parameters</h2>
+<dl>
+<dt><strong><code>ax</code></strong> :&ensp;<code>matplotlib </code>ax<code> object</code></dt>
+<dd>The axis on which to plot</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def plot_tri(self, ax):
+    &#39;&#39;&#39;Plot self.dt on mpl axes `ax`
+
+    Parameters
+    ----------
+    ax : matplotlib `ax` object
+        The axis on which to plot
+    &#39;&#39;&#39;
+    centers = np.sum(self.dt.points[self.dt.simplices], axis=1, dtype=&#39;int&#39;)/3.0
+    centr = self.centroid(centers)
+    colors = np.array([ (x - centr[0])**2 + (y - centr[1])**2 for x, y in centers])
+    ax.tripcolor(self.dt.points[:,0], self.dt.points[:,1], self.dt.simplices, facecolors=colors, cmap=&#39;YlGn&#39;, edgecolors=&#39;darkgrey&#39;)
+    ax.set_aspect(&#39;equal&#39;)
+    ax.set_facecolor(&#39;lightblue&#39;)</code></pre>
+</details>
+</dd>
+<dt id="path_planning.gen_polygon.ConvPolygon.shape_graph"><code class="name flex">
+<span>def <span class="ident">shape_graph</span></span>(<span>self)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>make the graphs that define the polygon</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def shape_graph(self):
+    &#39;&#39;&#39;make the graphs that define the polygon
+    &#39;&#39;&#39;
+    graphs = []
+    for boundary, outer in self.blist:
+        G = nx.DiGraph()
+        elist, nlist = [], []
+        
+        # check if we flip 
+        cw = 0.0
+        for k, v in boundary.items():
+            x1, y1 = tuple(self.points[k])
+            x2, y2 = tuple(self.points[v[0]])
+            cw += (x2 - x1) * (y2 + y1)
+        if cw &gt;= 0 and outer:
+            flip = False
+            weight = int(1)
+        elif cw &gt;= 0 and not outer:
+            weight = int(2)
+            flip = True
+        elif cw &lt; 0 and outer:
+            weight = int(1)
+            flip = True
+        else:
+            weight = int(2)
+            flip = False
+        # build the boundary
+        for k, v in boundary.items():
+            nlist.append(k)
+            if flip:
+                elist.append( (v[0], k, weight) )
+            else:
+                elist.append( (k, v[0], weight) )
+
+        G.add_nodes_from(nlist)
+        G.add_weighted_edges_from(elist)
+        graphs.append(G)
+    G = nx.compose_all(graphs)
+    return G</code></pre>
+</details>
+</dd>
+<dt id="path_planning.gen_polygon.ConvPolygon.update_plot"><code class="name flex">
+<span>def <span class="ident">update_plot</span></span>(<span>self, ax)</span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def update_plot(self, ax):
+    ax.clear()
+    self.plot_tri(ax)
+    plt.pause(.1)</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3>Super-module</h3>
+<ul>
+<li><code><a title="path_planning" href="index.html">path_planning</a></code></li>
+</ul>
+</li>
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="path_planning.gen_polygon.ConvPolygon" href="#path_planning.gen_polygon.ConvPolygon">ConvPolygon</a></code></h4>
+<ul class="two-column">
+<li><code><a title="path_planning.gen_polygon.ConvPolygon.aspect" href="#path_planning.gen_polygon.ConvPolygon.aspect">aspect</a></code></li>
+<li><code><a title="path_planning.gen_polygon.ConvPolygon.centroid" href="#path_planning.gen_polygon.ConvPolygon.centroid">centroid</a></code></li>
+<li><code><a title="path_planning.gen_polygon.ConvPolygon.chart" href="#path_planning.gen_polygon.ConvPolygon.chart">chart</a></code></li>
+<li><code><a title="path_planning.gen_polygon.ConvPolygon.check_edgesafety" href="#path_planning.gen_polygon.ConvPolygon.check_edgesafety">check_edgesafety</a></code></li>
+<li><code><a title="path_planning.gen_polygon.ConvPolygon.count_outer_edges" href="#path_planning.gen_polygon.ConvPolygon.count_outer_edges">count_outer_edges</a></code></li>
+<li><code><a title="path_planning.gen_polygon.ConvPolygon.count_tris" href="#path_planning.gen_polygon.ConvPolygon.count_tris">count_tris</a></code></li>
+<li><code><a title="path_planning.gen_polygon.ConvPolygon.del_tri" href="#path_planning.gen_polygon.ConvPolygon.del_tri">del_tri</a></code></li>
+<li><code><a title="path_planning.gen_polygon.ConvPolygon.gen_cluster_points" href="#path_planning.gen_polygon.ConvPolygon.gen_cluster_points">gen_cluster_points</a></code></li>
+<li><code><a title="path_planning.gen_polygon.ConvPolygon.gen_poly" href="#path_planning.gen_polygon.ConvPolygon.gen_poly">gen_poly</a></code></li>
+<li><code><a title="path_planning.gen_polygon.ConvPolygon.id_bps" href="#path_planning.gen_polygon.ConvPolygon.id_bps">id_bps</a></code></li>
+<li><code><a title="path_planning.gen_polygon.ConvPolygon.id_tris" href="#path_planning.gen_polygon.ConvPolygon.id_tris">id_tris</a></code></li>
+<li><code><a title="path_planning.gen_polygon.ConvPolygon.id_tris2" href="#path_planning.gen_polygon.ConvPolygon.id_tris2">id_tris2</a></code></li>
+<li><code><a title="path_planning.gen_polygon.ConvPolygon.make_boundaries" href="#path_planning.gen_polygon.ConvPolygon.make_boundaries">make_boundaries</a></code></li>
+<li><code><a title="path_planning.gen_polygon.ConvPolygon.order_boundaries" href="#path_planning.gen_polygon.ConvPolygon.order_boundaries">order_boundaries</a></code></li>
+<li><code><a title="path_planning.gen_polygon.ConvPolygon.plot_tri" href="#path_planning.gen_polygon.ConvPolygon.plot_tri">plot_tri</a></code></li>
+<li><code><a title="path_planning.gen_polygon.ConvPolygon.shape_graph" href="#path_planning.gen_polygon.ConvPolygon.shape_graph">shape_graph</a></code></li>
+<li><code><a title="path_planning.gen_polygon.ConvPolygon.update_plot" href="#path_planning.gen_polygon.ConvPolygon.update_plot">update_plot</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.9.2</a>.</p>
+</footer>
+</body>
+</html>
