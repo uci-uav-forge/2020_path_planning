@@ -248,31 +248,31 @@ class Sweep(object):
             return waypoints
 
 class PathAnimator(object):
-    def __init__(self):
-        pass
+    def __init__(self, path_color='blue'):
+        self.path_color = path_color
 
     def animate(self, path, world, fig, ax1, ax2, save=False, **kwargs):
-        tour = []
         rg_node = []
-        for cell, i in path:
-            rg_node.extend([i] * cell.shape[0])
-        path = np.concatenate([p[0] for p in path], axis=0)
-        print(len(rg_node))
-        print(path.shape)
+        # for each path that sweeps a cell, pair every cell_sweep_path point with the
+        # vertex cellv of the corresponding cell
+        for cell_sweep_path, cellv in path:
+            rg_node.extend([cellv] * cell_sweep_path.shape[0])
+        # the path is now in p[0], every vertex is now in p[1]
 
-        cmap = plt.get_cmap('viridis')
-        plt.gcf()
-        path_linecoll = matplotlib.collections.LineCollection( 
-            path, 
-            linestyle='-', 
-            color='red',
-            linewidth=0.5,
-            capstyle='round',
-            joinstyle='round',
+        # get raw path
+        path = np.concatenate([p[0] for p in path], axis=0)
+
+        path_line = matplotlib.lines.Line2D(
+            path[:,0],
+            path[:,1],
             animated=True,
-            )
+            antialiased=True,
+            color=self.path_color,
+            linewidth=0.5,
+            linestyle='-',
+            marker='.',
+        )
         scale = (ax2.get_xlim()[1] - ax2.get_xlim()[0]) * 0.02
-        
         rg_circle = matplotlib.patches.Ellipse(
             (1e5,1e5),
             width=scale,
@@ -281,27 +281,25 @@ class PathAnimator(object):
             fill=True,
             hatch='+',
             zorder=4,
-            linewidth=
-            None,
-            color='red'
+            linewidth=None,
+            color=self.path_color,
         )
 
-
-        path_linecoll.set_animated(True)
         frames = path.shape[0]
         def initframe():
-            ax1.add_artist(path_linecoll)
+            ax1.add_artist(path_line)
             ax2.add_patch(rg_circle)
-            return path_linecoll, rg_circle
+            return path_line, rg_circle
             
         def drawframe(i):
-            ax1.draw_artist(path_linecoll)
+            ax1.draw_artist(path_line)
+            path_line.set_xdata(path[:i,0])
+            path_line.set_ydata(path[:i,1])
             ax2.draw_artist(rg_circle)
             pts = np.array(world.points)
-            path_linecoll.set_segments( [path[:i,:]] )
             rg_center = world.Rg.nodes[rg_node[i]]['center']
             rg_circle.set_center((rg_center[0], rg_center[1]))
-            return path_linecoll, rg_circle
+            return path_line, rg_circle
 
 
         if save:
