@@ -1,27 +1,10 @@
 import numpy as np
 from enum import Enum
-from gen_polygon import ConvPolygon
 import matplotlib.pyplot as plt
 import networkx as nx
-import math, itertools, string, copy
+import math, copy, string
 from matplotlib.transforms import offset_copy
 from matplotlib.collections import LineCollection
-import matplotlib
-
-plt.rcParams['figure.facecolor'] = 'grey'
-
-SMALL_SIZE = 9
-MEDIUM_SIZE = 11
-BIGGER_SIZE = 13
-plt.rcParams['figure.facecolor'] = 'grey'
-plt.rcParams['font.family'] = 'serif'
-plt.rcParams['font.size'] = SMALL_SIZE
-plt.rcParams['axes.titlesize'] = MEDIUM_SIZE
-plt.rcParams['axes.labelsize'] = SMALL_SIZE
-plt.rcParams['xtick.labelsize'] = SMALL_SIZE
-plt.rcParams['ytick.labelsize'] = SMALL_SIZE
-plt.rcParams['legend.fontsize'] = SMALL_SIZE
-plt.rcParams['figure.titlesize'] = BIGGER_SIZE
 
 class Event(Enum):
     CLOSE=1
@@ -32,13 +15,11 @@ class Event(Enum):
     INTERSECT=6
 
 class World(object):
-    def __init__(self, poly=ConvPolygon(), theta=0):
-        # the input polygon
-        self.poly = poly
+    def __init__(self, points, G, theta=0):
         # the points in 2d space which form the polygon
-        self.points = copy.deepcopy(poly.points)
+        self.points = points
         # the structural graph of the world
-        self.G = copy.deepcopy(poly.G)
+        self.G = G
         # list of sets() which represent a cell
         self.cells, self.cells_list = self._line_sweep(theta)
         # dict of cell points by cell idx
@@ -550,6 +531,3 @@ def draw_graph(ax, G, points, **kwargs):
         ax2.draw_graph(ax2, G, points, **savefig_kwargs)
         fig2.save(savepath, format='png', facecolor='grey')
     return ax
-
-if __name__ == '__main__':
-    print('nothing')

@@ -10,7 +10,6 @@ This code is used and modified under MIT license.
 import matplotlib.pyplot as plt
 import numpy as np
 
-
 class GridMap:
     """
     GridMap class

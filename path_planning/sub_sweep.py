@@ -6,16 +6,13 @@ modifications made by: Rick Meade
 
 This code is used and modified under MIT license.
 """
-import math, os, sys
+from path_planning.grid_map_lib import GridMap
+import math, matplotlib
 from enum import IntEnum
 import numpy as np
 from scipy.spatial.transform import Rotation as Rot
-from grid_map_lib import GridMap
 import matplotlib.pyplot as plt
 from matplotlib.patches import PathPatch, Patch, Circle
-import matplotlib
-
-do_animation = True
 
 class SweepSearcher:
     class SweepDirection(IntEnum):

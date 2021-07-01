@@ -1,19 +1,15 @@
-from bcd import World
-import bcd
+from path_planning.bcd import World
+from path_planning import bcd
+from path_planning.sub_sweep import PathAnimator, Sweep
 from tqdm import tqdm
-from gen_polygon import ConvPolygon
-from sub_sweep import PathAnimator, Sweep
 from multiprocessing.pool import Pool
 import numpy as np
 import networkx as nx
 import matplotlib.pyplot as plt
-from datetime import datetime
-import copy
 import math
 
-
 class PathGenerator(object):
-    def __init__(self, poly):
+    def __init__(self, points, G):
         self.SCALAR_QUALITIES = {
             'avg_cell_width',
             'min_cell_width',
@@ -23,19 +19,18 @@ class PathGenerator(object):
             'degrees',
             'area_variance',
         }
-        self.polygon = poly
+        self.points, self.G = points, G
         self.worlds = self.sort_worlds(self.create_worlds(6), 'no_cells')
         # either choose 0 or -1 depending on if you want to minimize or maximize
         # scalar quality...
         self.world = self.worlds[0]
 
-    
     def create_worlds(self, no_worlds=180):
         angles = np.linspace(0, np.pi, no_worlds)
         worlds = []
-        print('creating Worlds...')
+        print('creating worlds...')
         for angle in tqdm(angles):
-            addworld = lambda angle: World(poly=self.polygon, theta=angle)
+            addworld = lambda angle: World(self.points, self.G, theta=angle)
             worlds.append(addworld(angle))
         print('done!')
         return worlds
@@ -109,7 +104,7 @@ class PathGenerator(object):
         else:
             return np.array(np.linspace(midpoint, self.centroid(v), math.ceil(distance)))
 
-    def show_path_animation(self, save=False):
+    def show_path_animation(self, path, save=False):
         '''Generate and show a path animation in the plotting window.
 
         Parameters
@@ -151,8 +146,3 @@ class PathGenerator(object):
         path_animator.animate(path, self.world, fig, ax1, ax2, save=save, savepath='./planner_alpha.mp4')
         plt.show()
 
-
-poly = ConvPolygon(points=(6, 15, 10, 10), jaggedness=12, holes=3)
-pathgen = PathGenerator(poly)
-path = pathgen.get_path(0.8)
-pathgen.show_path_animation()
