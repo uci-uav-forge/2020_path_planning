@@ -1,12 +1,7 @@
-from datetime import datetime
-from os import PRIO_USER
-from matplotlib import transforms
 from scipy import spatial
 import numpy as np
 import networkx as nx
 from matplotlib import pyplot as plt
-from matplotlib import cm
-import warnings
 
 def beta_clusters(clusters: int=3, ppc: int=20, alpha:float=4.0, beta: float=4.0) -> np.ndarray:
     pts = np.zeros((clusters*ppc, 2))

@@ -1,16 +1,7 @@
-from typing import Generator
-from networkx.classes.function import degree
-from networkx.utils.decorators import preserve_random_state
-from numpy.core.fromnumeric import sort
-from numpy.random.mtrand import vonmises
-from p2 import polygon
 from polyskel import polyskel
 import networkx as nx
 import numpy as np
-import copy
-from matplotlib import pyplot as plt
-import enum
-import euclid3
+import copy, enum
 
 class Event(enum.Enum):
     CLOSE=1
@@ -144,22 +135,6 @@ def build_reebgraph(H: nx.DiGraph, cells: list) -> None:
         # graph of skeleton. we will traverse this when 
         # passing directly through a cell without scanning
         R.nodes[n]['tgraph'] = T
-
-    # TODO
-    # P is an empty undirected graph
-    # for c node/cell/skeleton in eulerian tour of RG:
-        # compose the skeleton with P
-        # on P: mark the edges that were just added with an "internal" weight
-        # at every edge between nodes in the eulerian tour
-        # find the midpoint of the edge
-        # find the closest point on our skeleton to the midpoint
-        # find the closest point on their skeleton to the midpoint
-        # add an edge on P to that point
-        # then the next node will be the cell we just connected
-        # or we will eventually get there
-    # clip degree-1 "internal" edges/nodes from P
-        # NOTE this may not be necessary, because of how skeletons are formed;
-        # their ends may be the closest points by default.
     return R
 
 def get_points_array(H:nx.Graph, nlist:list = None, posattr:str='points'):
