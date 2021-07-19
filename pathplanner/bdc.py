@@ -2,6 +2,9 @@ from polyskel import polyskel
 import networkx as nx
 import numpy as np
 import copy, enum
+import matplotlib.pyplot as plt
+from pathplanner import polygon
+from shapely import geometry
 
 class Event(enum.Enum):
     CLOSE=1
@@ -14,6 +17,40 @@ class Event(enum.Enum):
 def rad2degree(rad): return rad*180/np.pi
 def degree2rad(deg): return deg*np.pi/180
 
+
+def discretize(J: nx.DiGraph, R:nx.Graph, gridsz:float, theta=None):
+    if theta is not None:
+        matr = make_rot_matrix(-theta)
+        revmatr = make_rot_matrix(theta)
+        K = nx.DiGraph()
+        K = copy.deepcopy(J)
+        for n in K:
+            K.nodes[n]['points'] = matr @ K.nodes[n]['points']
+    else:
+        matr = np.eye((2,2))
+        revmatr = matr
+        K = J
+    # make grid points
+    pts = np.array([K.nodes[n]['points'] for n in K])
+    xmin, xmax = np.min(pts[:,0]), np.max(pts[:,0])
+    ymin, ymax = np.min(pts[:,1]), np.max(pts[:,1])
+    x, y = np.meshgrid(np.arange(xmin, xmax, gridsz), np.arange(ymin, ymax, gridsz))
+    P = nx.grid_2d_graph(*x.shape)
+    # polygons
+    polygons = []
+    for n in R.nodes:
+        cellpts = np.dot(matr, R.nodes[n]['cellpts'].T).T
+        polygons.append(geometry.Polygon(cellpts), n)
+
+    delnodes = []
+    for n in P.nodes:
+        point = np.array([x[n], y[n]])
+        if any([p.contains(geometry.Point(point)) for p, _ in polygons]):
+            P.nodes[n]['points'] = np.dot(revmatr, point.T).T
+        else:
+            delnodes.append(n)
+    P.remove_nodes_from(delnodes)
+    return P
 
 def iscw(points: np.ndarray) -> bool:
     '''Determine orientation of a set of points
@@ -35,7 +72,7 @@ def iscw(points: np.ndarray) -> bool:
     if c > 0: return True
     else: return False
 
-def line_sweep(G: nx.DiGraph, theta: float, posattr: str = 'points') -> tuple:
+def line_sweep(G: nx.DiGraph, theta: float = 0, posattr: str = 'points') -> tuple:
     # sorted node list becomes our list of events
     H = rotate_graph(G, theta, posattr=posattr)
     # sort left to right and store sorted node list in L.
@@ -56,8 +93,8 @@ def line_sweep(G: nx.DiGraph, theta: float, posattr: str = 'points') -> tuple:
     J = rotate_graph(H, -theta, posattr=posattr)
     # build the reebgraph of J
     R = build_reebgraph(J, cells)
-    S = make_skelgraph(J, R)
-    return J, R, H, S
+    S = create_skelgraph(R, J)
+    return H, J, R, S
 
 def rg_centroid(R: nx.Graph, H: nx.DiGraph, cell: set) -> np.ndarray:
     p = np.zeros((2,), dtype=np.float64)
@@ -87,55 +124,144 @@ def build_reebgraph(H: nx.DiGraph, cells: list) -> None:
     R.add_edges_from(rgedges)
     for n in R.nodes:
         R.nodes[n]['cell'] = rgcells[n]
+        centroid = rg_centroid(R, H, rgcells[n])
+        R.nodes[n]['centroid'] = centroid
+        cellpts = [H.nodes[c]['points'] for c in rgcells[n]]
+        # close the polygon
+        cellpts.append(cellpts[0])
+        cellpts = np.array(cellpts)
+        R.nodes[n]['cellpts'] = cellpts
         
-    for n in R.nodes:
-        c = R.nodes[n]['cell']
-        poly = []
-        for e1, _ in nx.find_cycle(nx.Graph(H.subgraph(c))):
-            poly.append(H.nodes[e1]['points'])
-        poly = np.array(poly)
-        if iscw(poly): poly = np.flip(poly, axis=0)
-        # TODO: all of this is bad because polyskel. It doesn't seem
-        # too hard to rewrite polyskel to store connectivity from the
-        # get-go.
-        print(iscw(poly))
-        def skl_sortkey(skl): return skl[1]
-        skels = polyskel.skeletonize(poly, holes=[])
-        # good lord
-        newskels = []
-        for u, v, w in skels:
-            u = np.array(list(u))
-            neww = []
-            for x in w:
-                neww.append(np.array(list(x)))
-            newskels.append((u, v, neww))
-        skels = newskels
-        epsilon = np.array([1e-5, 1e-5])
-        elist = []
-        # WHY??
-        for i, (pt1, _, _) in enumerate(skels):
-            for j, (_, _, neighbors2) in enumerate(skels):
-                if i != j or j != i:
-                    # WHY????
-                    for n2 in neighbors2:
-                        if np.all(np.abs(pt1 - n2) <= epsilon):
-                            # IM DEAD
-                            elist.append((i, j))
-        if not elist:
-            middle = rg_centroid(R, H, c)
-            T = nx.Graph()
-            T.add_node(1, points=middle)
+        # plt.plot(cellpts[:,0], cellpts[:,1])
+        # triangles can't have straight skeleton
+        if len(rgcells[n]) > 3:
+            skel = polyskel.skeletonize(cellpts, holes=[])
+            skel = fix_polyskel(skel)
+            T = traverse_polyskel(R, n, skel)
         else:
-            middle = list(max(skels, key=skl_sortkey)[0])
-            T = nx.Graph(elist)
-            for n_ in T.nodes:
-                T.nodes[n_]['points'] = skels[n_][0]
-
-        R.nodes[n]['centroid'] = np.array(middle)
-        # graph of skeleton. we will traverse this when 
-        # passing directly through a cell without scanning
-        R.nodes[n]['tgraph'] = T
+            T = nx.Graph()
+            T.add_node(0, points=centroid, interior=True, 
+            parent=(R.nodes[n]['cell'], R.nodes[n]['cellpts'])
+            )
+        for e1, e2 in T.edges:
+            T[e1][e2]['interior'] = True
+        R.nodes[n]['skel_graph'] = T
     return R
+
+def create_skelgraph(R: nx.Graph, H: nx.DiGraph):
+    # in preparation to join, make nodes unique
+    unique_node = 0
+    for n in R.nodes:
+        unique_node = remap_nodes_unique(unique_node, R.nodes[n]['skel_graph'])
+
+    visited = set()
+    for this, that in nx.eulerian_circuit(nx.eulerize(R)):
+        if frozenset((this, that)) not in visited:
+            visited.add(frozenset((this, that)))
+            # midpoint is the midpoint of the line between cells of 'this' and 'that' nodes
+            # on reeb graph. We walk through each transition between cells, finding the midpoint
+            # and adding it to the straight skeletons in R.
+            midp = get_midpoint_shared(H, R, this, that)
+            this_closest = get_closest_on_skel(R, this, midp)
+            that_closest = get_closest_on_skel(R, that, midp)
+            # get midpoint node
+            midp_node = -unique_node
+            unique_node += 1
+            R.nodes[this]['skel_graph'].add_node(midp_node, interior=False, points=midp, parent=None)
+            R.nodes[this]['skel_graph'].add_edge(this_closest, midp_node, interior=False)
+            R.nodes[that]['skel_graph'].add_node(midp_node, interior=False, points=midp, parent=None)
+            R.nodes[that]['skel_graph'].add_edge(that_closest, midp_node, interior=False)
+    # compose all
+    for n in R.nodes:
+        S = nx.compose_all([R.nodes[n]['skel_graph'] for n in R.nodes])
+    for e1, e2 in S.edges:
+        S[e1][e2]['distance'] = np.linalg.norm(S.nodes[e1]['points'] - S.nodes[e2]['points'])
+    return S
+    
+def get_closest_on_skel(R: nx.graph, rnode: int, midp):
+    this_connectors = []
+    for n in R.nodes[rnode]['skel_graph'].nodes:
+        if R.nodes[rnode]['skel_graph'].nodes[n]['interior']:
+            thispt = R.nodes[rnode]['skel_graph'].nodes[n]['points']
+            dist = dotself(midp - thispt)
+            this_connectors.append((n, dist))
+    # return closest
+    return sorted(this_connectors, key=lambda t: t[1])[0][0]
+
+
+def fix_polyskel(skel: list):
+    newskel = []
+    def strip(leaf): return np.array(leaf)
+    for origin, height, leafs in skel:
+        origin = np.array(origin)
+        leafs = list(map(strip, leafs))
+        newskel.append((origin, height, leafs))
+    return newskel
+
+def traverse_polyskel(R: nx.Graph, rn: int, skel: list):
+    epsilon = 1e-5
+    elist = []
+    for i, (pt1, _, _) in enumerate(skel):
+        for j, (_, _, lfs2) in enumerate(skel):
+            for l in lfs2:
+                if dotself(pt1 - l) <= epsilon:
+                    elist.append((i, j))
+    T = nx.Graph(elist)
+    for n in T.nodes:
+        T.nodes[n]['points'] = skel[n][0]
+        T.nodes[n]['interior'] = True
+        T.nodes[n]['parent'] = R.nodes[rn]['cell'], R.nodes[rn]['cellpts']
+    return T
+
+
+
+    # for n in R.nodes:
+    #     c = R.nodes[n]['cell']
+    #     poly = []
+    #     for e1, _ in nx.find_cycle(nx.Graph(H.subgraph(c))):
+    #         poly.append(H.nodes[e1]['points'])
+    #     poly = np.array(poly)
+    #     if iscw(poly): poly = np.flip(poly, axis=0)
+    #     # TODO: all of this is bad because polyskel. It doesn't seem
+    #     # too hard to rewrite polyskel to store connectivity from the
+    #     # get-go.
+    #     print(iscw(poly))
+    #     def skl_sortkey(skl): return skl[1]
+    #     skels = polyskel.skeletonize(poly, holes=[])
+    #     # good lord
+    #     newskels = []
+    #     for u, v, w in skels:
+    #         u = np.array(list(u))
+    #         neww = []
+    #         for x in w:
+    #             neww.append(np.array(list(x)))
+    #         newskels.append((u, v, neww))
+    #     skels = newskels
+    #     epsilon = np.array([1e-5, 1e-5])
+    #     elist = []
+    #     # WHY??
+    #     for i, (pt1, _, _) in enumerate(skels):
+    #         for j, (_, _, neighbors2) in enumerate(skels):
+    #             if i != j or j != i:
+    #                 # WHY????
+    #                 for n2 in neighbors2:
+    #                     if np.all(np.abs(pt1 - n2) <= epsilon):
+    #                         # IM DEAD
+    #                         elist.append((i, j))
+    #     if not elist:
+    #         middle = rg_centroid(R, H, c)
+    #         T = nx.Graph()
+    #         T.add_node(1, points=middle)
+    #     else:
+    #         middle = list(max(skels, key=skl_sortkey)[0])
+    #         T = nx.Graph(elist)
+    #         for n_ in T.nodes:
+    #             T.nodes[n_]['points'] = skels[n_][0]
+
+    #     R.nodes[n]['centroid'] = np.array(middle)
+    #     # graph of skeleton. we will traverse this when 
+    #     # passing directly through a cell without scanning
+    #     R.nodes[n]['tgraph'] = T
 
 def get_points_array(H:nx.Graph, nlist:list = None, posattr:str='points'):
     if nlist == None:

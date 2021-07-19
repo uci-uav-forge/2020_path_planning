@@ -12,7 +12,7 @@ from collections import namedtuple
 
 log = logging.getLogger("__name__")
 
-EPSILON = 0.00001
+EPSILON = 1e-15
 
 class Debug:
 	def __init__(self, image):
