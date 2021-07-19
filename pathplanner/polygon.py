@@ -14,7 +14,7 @@ def beta_clusters(clusters: int=3, ppc: int=20, alpha:float=4.0, beta: float=4.0
         loc += np.random.uniform(low=-1, high=1, size=loc.shape)
     return pts
 
-def remove_close_points(points: np.ndarray, eps: float = 0.07):
+def remove_close_points(points: np.ndarray, eps: float = 0.07) -> np.ndarray:
     def dist(p1, p2): 
         line = p2-p1
         return np.linalg.norm(line)
