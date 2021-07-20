@@ -1,3 +1,4 @@
+from os import XATTR_SIZE_MAX
 from polyskel import polyskel
 import networkx as nx
 import numpy as np
@@ -18,58 +19,57 @@ def rad2degree(rad): return rad*180/np.pi
 def degree2rad(deg): return deg*np.pi/180
 
 
-def discretize(J: nx.DiGraph, R:nx.Graph, gridsz:float, theta=None) -> nx.Graph:
-    '''Discretize a graph `J`, with grid size gridsz, and grid angle theta.
-
-    Parameters
-    ----------
-    J : nx.DiGraph
-        The bdc-composed world graph`
-    R : nx.Graph
-        The reeb graph
-    gridsz : float
-        The size of the resulting discretized grid. Must be >0.
-    theta : float, optional
-        Angle for the discretization, by default None
-
-    Returns
-    -------
-    nx.Graph
-        The discretized grid. Each node of the graph is joined by max 4 neighbors:
-        2 x neighbors and 2 y neighbors (if theta is supplied, these xy axes correspond
-        to an angled frame of reference)
-    '''
-    if theta is not None:
-        matr = make_rot_matrix(-theta)
-        revmatr = make_rot_matrix(theta)
-        K = nx.DiGraph()
-        K = copy.deepcopy(J)
-        for n in K:
-            K.nodes[n]['points'] = matr @ K.nodes[n]['points']
-    else:
-        matr = np.eye((2,2))
-        revmatr = matr
-        K = J
-    # make grid points
-    pts = np.array([K.nodes[n]['points'] for n in K])
+def discretize_entire(J:nx.DiGraph, R:nx.Graph, gridsz:float):
+    pts = get_points_array(J)
     xmin, xmax = np.min(pts[:,0]), np.max(pts[:,0])
     ymin, ymax = np.min(pts[:,1]), np.max(pts[:,1])
     x, y = np.meshgrid(np.arange(xmin, xmax, gridsz), np.arange(ymin, ymax, gridsz))
     P = nx.grid_2d_graph(*x.shape)
-    # polygons
-    polygons = []
+    polygons=[]
     for n in R.nodes:
-        cellpts = np.dot(matr, R.nodes[n]['cellpts'].T).T
-        polygons.append(geometry.Polygon(cellpts), n)
-
+        polygons.append(geometry.Polygon(R.nodes[n]['cellpts']))
     delnodes = []
     for n in P.nodes:
-        point = np.array([x[n], y[n]])
-        if any([p.contains(geometry.Point(point)) for p, _ in polygons]):
-            P.nodes[n]['points'] = np.dot(revmatr, point.T).T
+        point = np.array((x[n], y[n]))
+        if any([p.contains(geometry.Point(point)) for p in polygons]):
+            P.nodes[n]['points'] = point
         else:
             delnodes.append(n)
     P.remove_nodes_from(delnodes)
+    P = P.subgraph(max(nx.connected_components(P), key=len))
+    return P
+
+def add_discretized_cells(J:nx.DiGraph, R:nx.Graph, theta, gridsz) -> None:
+    for n in R.nodes:
+        P = discretize_cell(J, R.nodes[n]['cell'], theta, gridsz)
+        R.nodes[n]['grid'] = P
+
+def discretize_cell(J:nx.DiGraph, c, theta, gridsz, diags=True):
+    # offset by small amount so that grid begins just inside of polygon edge
+    eps = 0.0001
+    pts = get_points_array(J, c)
+    matr = make_rot_matrix(theta)
+    revmatr = make_rot_matrix(-theta)
+    # rotate points
+    pts = np.dot(pts, matr)
+    poly = geometry.Polygon(pts)
+    # cover cell in points
+    xmin, xmax = np.min(pts[:,0]) + eps, np.max(pts[:,0])
+    ymin, ymax = np.min(pts[:,1]) + eps, np.max(pts[:,1])
+    x, y = np.meshgrid(np.arange(xmin, xmax, gridsz), np.arange(ymin, ymax, gridsz))
+    # draw 2dgraph
+    P = nx.grid_2d_graph(*x.shape)
+    rm_node_list = []
+    for n in P.nodes:
+        point = np.array((x[n], y[n]))
+        if poly.contains(geometry.Point(point)):
+            P.nodes[n]['points'] = np.dot(point, revmatr)
+        else:
+            rm_node_list.append(n)
+    P.remove_nodes_from(rm_node_list)
+    ccs = list(nx.connected_components(P))
+    if len(ccs) > 1:
+        P = P.subgraph(max(ccs, key=len))
     return P
 
 def iscw(points: np.ndarray) -> bool:
@@ -192,7 +192,7 @@ def build_reebgraph(H: nx.DiGraph, cells: list) -> nx.Graph:
     R.add_edges_from(rgedges)
     for n in R.nodes:
         R.nodes[n]['cell'] = rgcells[n]
-        centroid = rg_centroid(R, H, rgcells[n])
+        centroid = rg_centroid(H, rgcells[n])
         R.nodes[n]['centroid'] = centroid
         cellpts = [H.nodes[c]['points'] for c in rgcells[n]]
         # close the polygon
