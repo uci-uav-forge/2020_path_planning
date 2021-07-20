@@ -1,4 +1,3 @@
-from os import XATTR_SIZE_MAX
 from polyskel import polyskel
 import networkx as nx
 import numpy as np
